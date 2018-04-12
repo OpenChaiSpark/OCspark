@@ -18,6 +18,7 @@ package org.openchai.tcp
 
 import org.openchai.tcp.util.{FileUtils, TcpUtils}
 import org.openchai.tcp.xfer.{DataPtr, RawData}
+import org.openchai.tcp.util.Logger._
 
 package object rpc {
 
@@ -37,7 +38,13 @@ package object rpc {
       case _ => optRpc.get
     }
 
-    val clientName = TcpUtils.getLocalHostname
+    val clientName = try {
+      TcpUtils.getLocalHostname
+    } catch {
+      case e: Exception =>
+        error(s"Failed getLocalHostname", e)
+        "GpuController"
+    }
   }
 
   abstract class ServerIf(val name: String ="ServerIf") {
