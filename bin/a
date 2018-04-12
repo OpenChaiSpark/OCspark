@@ -1,0 +1,123 @@
+1902  git checkout origin/memfix
+ 1903  git checkout javadba/memfix
+ 1904  git log
+ 1905  bin/buildtf.arm.sh
+ 1906  publish
+ 1907  vi /shared/conf/submitter.yml
+ 1908  vi /shared/conf/apps-config.yml
+ 1909  vi /shared/gpu-slaves.txt
+ 1910  b
+ 1911  vi bin/startStopServers.sh
+ 1912  type starTTF
+ 1913  type starttf
+ 1914  b
+ 1915  type starttf
+ 1916  stoptf
+ 1917  starttf
+ 1918  bin/runtfserver.sh
+ 1919  exit
+ 1920  pubimg2
+ 1921  pubimg1
+ 1922  pubimg2
+ 1923  bin/gpucontroller.sh
+ 1924  starttf
+ 1925  cat /shared/gpu-slaves.txt
+ 1926  pubimg2
+ 1927  ssh txa1 kill -9 $(ps -ef | grep tf | awk '{print $2}')
+ 1928  showtf
+ 1929  pubimg1
+ 1930  pubimg2
+ 1931  gitf
+ 1932  git checkout origin/master
+ 1933  mvn clean
+ 1934  bin/buildtf.arm.sh
+ 1935  bin/gpucontroller.sh
+ 1936  publish
+ 1937  ll /shared/tf-1.0.0.jar
+ 1938  ls -lrta /shared/tf-1.0.0.jar
+ 1939  ls -l /shared/tf-1.0.0.jar
+ 1940  ls -L /shared/tf-1.0.0.jar
+ 1941  ll /git/OCspark/tf/target/tf-1.0.0.jar
+ 1942  starttf
+ 1943  pubimg3
+ 1944  summary
+ 1945  ssh txa1 "kill -9 $(ps -ef | grep 61260 | awk '{print $2}')"
+ 1946  ssh txa1 "ps -ef | grep 61260 | awk '{print $2}'"
+ 1947  ssh txa1 "ps -ef | grep 61260 | awk '{print $2}' | grep -v grep"
+ 1948  ssh txa1 "kill -9 $(ps -ef | grep 61260 | awk '{print $2}' | grep -v grep)"
+ 1949  ssh txa1 "ps -ef | grep 61260 | awk '{print $2}' | grep -v grep"
+ 1950  ssh txa1 "ps -ef | grep 61260 | awk '{print \$2}' | grep -v grep"
+ 1951  ssh txa1 "ps -ef | grep -v grep | grep 61260 | awk '{print \$2}'"
+ 1952  ssh txa1 "kill -9 \$(ps -ef | grep -v grep | grep 61260 | awk '{print \$2}')"
+ 1953  ssh txa1 "ps -ef | grep -v grep | grep 61260 | awk '{print \$2}'"
+ 1954  b
+ 1955  killtf() { ssh $1 "kill -9 \$(ps -ef | grep -v grep | grep $2 | awk '{print \$2}')" ; }
+ 1956  killtf txa2 61240
+ 1957  showtf
+ 1958  starttf() { ssh $1 "nohup /shared/runtfserver.sh localhost $2 > ~/tf.$2.out 2>&1 &"; }
+ 1959  starttf txa2 61240
+ 1960  showtf
+ 1961  bin/gpucontroller.sh
+ 1962  cd /shared
+ 1963  ll
+ 1964  which pubimg1
+ 1965  which pubimg
+ 1966  source bin/startStopServers.sh
+ 967  grep pubimg bin/*
+ 1968  hists pubi
+ 1969  type pubimg1
+ 1970  b
+ 1971  cd /data
+ 1972  ll
+ 1973  cd input.sav
+ 1974  ll
+ 1975  cd ..
+ 1976  jar -cvf inputimages.zip input.sav/*
+ 1977  ll
+ 1978  mkdir /shared/data
+ 1979  ll /shared/data
+ 1980  mv inputimages.zip /shared
+ 1981  vi gpu-slaves.txt
+ 1982  vi /shared/gpu-slaves.txt
+ 1983  jps
+ 1984  top
+ 1985  type pubimg
+ 1986  b
+ 1987  ssh steve@192.168.1.146
+ 1988  ssh steve@192.168.1.146
+ 1989  jps
+ 1990  sshtx3
+ 1991  pubimg2
+ 1992  hists ssh
+ 1993  top
+ 1994  which pubimg2
+ 1995  ¡
+ 1996  b
+ 1997  ll /data/input*
+ 1998  ll ~
+ 1999  jar -tvf ~/inputimages.jar
+ 2000  ll /data
+ 2001  cd
+ 2002  jar -cvf inputimages.1213.zip /data/input.sav
+ 2003  hists ssh
+ 2004  scp inputimages.1213.zip steve@192.168.1.146:~
+ 2005  b
+ 2006  hostname
+ 2007  ll /data
+ 2008  ll /data/input.sav
+ 2009  cd ~/.ssh
+ 2010  ll
+ 2011  type sshall
+ 2012  cat id_rsa.pub
+ 2013  cat id_rsa
+ 2014  ssh txa3
+ 2015  bin/gpucontroller.sh
+ 2016  ssh steve@192.168.1.146
+ 2017  cat  ~/.ssh/id_rsa.pub
+ 2018  ssh steve@192.168.1.146
+ 2019  ssh steve@192.168.1.146
+ 2020  ssh steve@192.168.1.146
+ 2021  hist
+ 2022  hists
+ 2023  hists
+ 2024  hists > out

@@ -58,3 +58,4 @@ wget https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz
 ln -s /shared/spark-2.1.1-bin-hadoop2.7 /shared/spark
 cd spark
 
+for s in $slaves; do echo $s; ssh-copy-id -i  ~/.ssh/id_rsa.pub steve@$s; done

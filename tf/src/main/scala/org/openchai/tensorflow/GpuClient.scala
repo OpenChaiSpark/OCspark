@@ -230,7 +230,7 @@ case class GpuClient(inGci: GpuClientInfo, failoverService: GpuFailoverService) 
     //    })
 
     var initTfClient = try {
-      TfClient(gci.conf, gci.gpuInfo.parseTfServerHostAndPort._1, gci.gpuInfo.parseTfServerHostAndPort._2)
+      TfClient(gci.conf, tx1Host, tx1Port)
     } catch {
       case e: Exception =>
         val (newGci, failedOver) = failoverService.fail(inGci, s"Unable to connect to $tx1Host:$tx1Port", Some(e))
