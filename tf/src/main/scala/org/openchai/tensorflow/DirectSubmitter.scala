@@ -24,7 +24,7 @@ object DirectSubmitter {
     val gpuInfos = readGpus(DefaultSlavesPath)
     if (conf.isDirect ) {
       val svc = gpuClientService(FailoverInfo(conf, gpuInfos), conf.batchSize)
-      Thread.currentThread.join
+      Thread.currentThread.join // MP: deliberately never-ending statement: effectively an infinite sleep.
     } else {
 //      val res = if (conf.isRest) {
 //        labelImgViaRest(conf, LabelImgRest(Option(conf.restHostAndPort), conf.tfServerAndPort, conf.master, "TFViaRest", conf.imgApp,
