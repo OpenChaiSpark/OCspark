@@ -12,8 +12,8 @@ cp -p $JAVA_HOME/include/linux/*.h $JAVA_HOME/include
 
 echo "[2] Compiling the C files PcieDMA[Client|Server].c .."
 
-pushd $GITDIR/tfdma/src/main/cpp/ && gcc -v -shared  -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" -dynamiclib  -odmaserver.dylib  -fpic $GITDIR/tfdma/src/main/cpp/org_openchai_tensorflow_api_PcieDMAServer.c; popd
-pushd $GITDIR/tfdma/src/main/cpp/ && gcc -v -shared  -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" -dynamiclib  -odmaclient.dylib  -fpic $GITDIR/tfdma/src/main/cpp/org_openchai_tensorflow_api_PcieDMAClient.c; popd
+pushd $GITDIR/tfdma/src/main/cpp/ && gcc -v -shared  -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/darwin" -dynamiclib  -odmaserver.dylib  -fpic $GITDIR/tfdma/src/main/cpp/org_openchai_tensorflow_api_PcieDMAServer.c; popd
+pushd $GITDIR/tfdma/src/main/cpp/ && gcc -v -shared  -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/darwin" -dynamiclib  -odmaclient.dylib  -fpic $GITDIR/tfdma/src/main/cpp/org_openchai_tensorflow_api_PcieDMAClient.c; popd
 echo "**Entry points for dylibs** "
 find . -name \*.so | xargs nm -g | awk '{print $3}'
 
