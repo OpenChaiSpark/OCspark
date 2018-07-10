@@ -141,6 +141,12 @@
           <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.openchai.ocspark</groupId>
+            <artifactId>tfengine</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
