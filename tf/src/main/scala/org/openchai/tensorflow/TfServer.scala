@@ -9,6 +9,7 @@ import org.openchai.tcp.util.Logger._
 import org.openchai.tcp.util._
 import org.openchai.tcp.xfer._
 import org.openchai.util.{AppConfig, TfConfig}
+import org.openchai.tfengine.TfEngine
 
 // The main thing we need to override here is using XferQConServerIf inside the server object
 class TfServer(val appConfig: AppConfig, val outQ: BlockingQueue[TaggedEntry], val tfTcpParams: TcpParams,
@@ -119,6 +120,8 @@ class TfServerIf(val appConfig: AppConfig, val q: BlockingQueue[TaggedEntry], po
     FileUtils.mkdirs(dir)
     val path = "%s/%s".format(dir,istruct.fpath.substring(istruct.fpath.lastIndexOf("/") + 1))
     FileUtils.writeBytes(path, data)
+    val dummy = TfEngine.processImage("bogus")
+    info(msg = s"******************* test tfenging: $dummy")
     val exe = estruct.cmdline.substring(0, estruct.cmdline.indexOf(" "))
     val exeResult = ProcessUtils.exec(ExecParams(estruct.appName, s"${exe}",
       Option(estruct.cmdline.replace("${1}",path).replace("${2}",istruct.tag).split(" ").tail), Some(Seq(estruct.runDir)), estruct.runDir))
