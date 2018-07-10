@@ -29,6 +29,7 @@
 	    <module>tfspark</module>
 	    <module>registry</module>
 	    <module>p2prdd</module>
+	    <module>tfengine</module>
 	    <!--<module>caffeonspark</module>-->
     </modules>
 
