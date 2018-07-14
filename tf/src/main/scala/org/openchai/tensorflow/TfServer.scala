@@ -120,8 +120,7 @@ class TfServerIf(val appConfig: AppConfig, val q: BlockingQueue[TaggedEntry], po
     FileUtils.mkdirs(dir)
     val path = "%s/%s".format(dir,istruct.fpath.substring(istruct.fpath.lastIndexOf("/") + 1))
     FileUtils.writeBytes(path, data)
-    val dummy = TfEngine.processImage("bogus")
-    info(msg = s"******************* test tfenging: $dummy")
+    info("tfengine test: " + TfEngine.processImage("bogus"))
     val exe = estruct.cmdline.substring(0, estruct.cmdline.indexOf(" "))
     val exeResult = ProcessUtils.exec(ExecParams(estruct.appName, s"${exe}",
       Option(estruct.cmdline.replace("${1}",path).replace("${2}",istruct.tag).split(" ").tail), Some(Seq(estruct.runDir)), estruct.runDir))
