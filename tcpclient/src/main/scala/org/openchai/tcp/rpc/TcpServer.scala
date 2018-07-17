@@ -26,6 +26,10 @@ import org.openchai.tcp.util.TcpCommon
 
 import scala.collection.mutable
 
+// For my file watcher test:
+import better.files.{File, FileMonitor}
+import scala.concurrent._
+
 object TcpServer {
   val DefaultPort = 8989
 }
@@ -94,6 +98,46 @@ case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pSer
     val os = new DataOutputStream(socket.getOutputStream)
     var nEmpty = 0
     val nWaitCycles = Option(System.getProperty("tcpserver.wait.cycles")).getOrElse("500").toInt
+
+    // BEGIN TEST: let's have the watcher here so it doesn't die in a child thread.
+    // Implies that we won't actually return exeResult objects from labelImg.  So
+    // instead of pasing the exeResult all the way to the output data stream via
+    // TcpServer.serve() we should somehow tie this callback to that stream...
+    val watcher = new FileMonitor(File("/Users/mike/tmp/special"), recursive = true) {
+//      override def onCreate(file: File, count: Int) = info(s"$file ALSO got created")
+      override def onCreate(file: File, count: Int) = {
+        val exeResult = new ExecResult(
+          new ExecParams(
+            "test-local",
+            "/Users/mike/bin/testoc",
+            Some(Array("/Users/mike/tmp/ocspark/tmp/cat.jpg")),
+            Some(List("/Users/mike/tmp/ocspark/run")),
+            "/Users/mike/tmp/ocspark/run"),
+          6206,
+          0,
+          "904\\t/Users/mike/tmp/ocspark/tmp/cat4.jpg",
+          "",
+          false)
+        info(s"$file REALLY got created")
+//        val istruct = ??
+//        val resp = LabelImgRespStruct(istruct.tag, istruct.fpath,
+//          istruct.outPath, exeResult)
+//        val resp2 = LabelImgResp(resp)
+//        val ser = serializeStream("/tmp/serverResp.out",
+//          pack("/tmp/serverResp.pack.out", resp))
+//        debug(s"serialized stream length is ${ser.length}")
+//        os.writeInt(ser.length)
+//        os.write(ser)
+//        os.flush
+      }
+    }
+    info("****** starting watcher")
+    val executorService = Executors.newFixedThreadPool(1)
+    val executionContext = ExecutionContext.fromExecutorService(executorService)
+    watcher.start()(executionContext)
+    info("*********** watcher finished")
+    // END TEST
+
     do {
       if (!msgPrinted) {
         debug("Listening for messages..")

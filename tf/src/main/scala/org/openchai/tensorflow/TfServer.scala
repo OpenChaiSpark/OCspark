@@ -9,7 +9,16 @@ import org.openchai.tcp.util.Logger._
 import org.openchai.tcp.util._
 import org.openchai.tcp.xfer._
 import org.openchai.util.{AppConfig, TfConfig}
+
+// For my java tfengine test:
 import org.openchai.tfengine.TfEngine
+
+// For my file watcher test:
+import better.files.{File, FileMonitor}
+import scala.concurrent._
+//import ExecutionContext.Implicits.global
+import java.util.concurrent.Executors
+
 
 // The main thing we need to override here is using XferQConServerIf inside the server object
 class TfServer(val appConfig: AppConfig, val outQ: BlockingQueue[TaggedEntry], val tfTcpParams: TcpParams,
@@ -78,6 +87,20 @@ object TfServer {
       args.slice(1, args.length)
     } else args
 
+    // BEGIN TEST: let's have the watcher here so it doesn't die in a child thread.
+    // Implies that we won't actually return exeResult objects from labelImg.  So
+    // instead of pasing the exeResult all the way to the output data stream via
+    // TcpServer.serve() we should somehow tie this callback to that stream...
+    val watcher = new FileMonitor(File("/Users/mike/tmp/special"), recursive = true) {
+      override def onCreate(file: File, count: Int) = info(s"$file got created")
+    }
+    info("****** starting watcher")
+    val executorService = Executors.newFixedThreadPool(1)
+    val executionContext = ExecutionContext.fromExecutorService(executorService)
+    watcher.start()(executionContext)
+    info("*********** watcher finished")
+    // END TEST
+
     val q = new ArrayBlockingQueue[TaggedEntry](1000)
     val (host, port, xhost, xport, ahost, aport) = if (args.length == 0) {
       val cont = XferConCommon.TestControllers
@@ -121,9 +144,39 @@ class TfServerIf(val appConfig: AppConfig, val q: BlockingQueue[TaggedEntry], po
     val path = "%s/%s".format(dir,istruct.fpath.substring(istruct.fpath.lastIndexOf("/") + 1))
     FileUtils.writeBytes(path, data)
     info("tfengine test: " + TfEngine.processImage("bogus"))
-    val exe = estruct.cmdline.substring(0, estruct.cmdline.indexOf(" "))
-    val exeResult = ProcessUtils.exec(ExecParams(estruct.appName, s"${exe}",
-      Option(estruct.cmdline.replace("${1}",path).replace("${2}",istruct.tag).split(" ").tail), Some(Seq(estruct.runDir)), estruct.runDir))
+    // Here instead of exec'ing the command we should just wait for the result file to appear (or time out if it doesn't appear).
+    val exeResult = if (estruct.appName == "test-local") {
+      info("Doing a test-local app")
+      if (false) {
+        val resultPath = path + ".out"
+        val watcher = new FileMonitor(File("/Users/mike/tmp/special"), recursive = true) {
+          override def onCreate(file: File, count: Int) = info(s"$file got created")
+        }
+        info("****** starting watcher")
+        val executorService = Executors.newFixedThreadPool(1)
+        val executionContext = ExecutionContext.fromExecutorService(executorService)
+        watcher.start()(executionContext)
+        info("*********** watcher finished")
+      }
+      val exeResult = new ExecResult(
+        new ExecParams(
+          "test-local",
+          "/Users/mike/bin/testoc",
+          Some(Array("/Users/mike/tmp/ocspark/tmp/cat.jpg")),
+          Some(List("/Users/mike/tmp/ocspark/run")),
+          "/Users/mike/tmp/ocspark/run"),
+        6206,
+        0,
+        "904\\t/Users/mike/tmp/ocspark/tmp/cat4.jpg",
+        "",
+        false)
+      exeResult
+    } else {
+      val exe = estruct.cmdline.substring(0, estruct.cmdline.indexOf(" "))
+      val exeResult = ProcessUtils.exec(ExecParams(estruct.appName, s"${exe}",
+        Option(estruct.cmdline.replace("${1}", path).replace("${2}", istruct.tag).split(" ").tail), Some(Seq(estruct.runDir)), estruct.runDir))
+      exeResult
+    }
     info(s"Result: $exeResult")
     LabelImgRespStruct(istruct.tag, istruct.fpath, istruct.outPath, exeResult)
   }
