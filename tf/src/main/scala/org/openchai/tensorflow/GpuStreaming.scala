@@ -96,12 +96,33 @@ object GpuStreaming {
           li.value.fpath
         }
         val fname = fileName(fp)
-        writeBytes(s"${ li.value.outDir}/$fname.result",
-          (if (li.value.cmdResult.isFatalError) {
-            fatalGpu = true
-            "FATAL ERROR"
-          } else {
-            (li.value.cmdResult.stdout + li.value.cmdResult.stderr)}).getBytes("ISO-8859-1"))
+        // MIKEP: v3.2: this is where we have to modify the fname by copying the tag inside res.
+        // But note: it looks like that's what already happens!!  fname is extracted from li.value.fpath!
+        // MIKEP: v3.5: this is also where we'll have to extract the packed results (if implemented in the app)
+        // and then loop over them, writing each out separately.
+        val miketmp = li.value.outDir + "/" + li.value.fpath.split("/").last + ".result"
+        info(s"******************* new name: ${miketmp}")
+        if (li.value.cmdResult.isFatalError) {
+          fatalGpu = true
+          writeBytes(s"${li.value.outDir}/$fname.result",
+            "FATAL ERROR".getBytes("ISO-8859-1"))
+        } else {
+          val results = li.value.cmdResult.stdout.split("""\|""")
+          results.foreach { result =>
+            info(s"*************** writing individual result: ${result}")
+            val pair = result.split(":")
+            val actualName = pair(0)
+            val actualStdout = pair(1)
+            writeBytes(s"${li.value.outDir}/$actualName.result",
+              (actualStdout + li.value.cmdResult.stderr).getBytes("ISO-8859-1"))
+          }
+        }
+//        writeBytes(s"${ li.value.outDir}/$fname.result",
+//          (if (li.value.cmdResult.isFatalError) {
+//            fatalGpu = true
+//            "FATAL ERROR"
+//          } else {
+//            (li.value.cmdResult.stdout + li.value.cmdResult.stderr)}).getBytes("ISO-8859-1"))
     }
     val processed = c.map {
       _.value.nImagesProcessed
