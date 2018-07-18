@@ -101,10 +101,12 @@ if ($config{DELETE}) {
 ## its own image name (say, as "foo.jpg:blah") in its stdout.
 
 my $content = join("|", map {
-  open(my $fh, "<", join("/", $dir, $_));
+  my $filename = $_;
+  open(my $fh, "<", join("/", $dir, $filename));
   my $json_content = <$fh>;
   close($fh);
-  $json_content;
+  (my $imagename = $filename) =~ s/\.json$//;
+  "$imagename:$json_content";
 } @jsons);
 
 ## Now apply back pressure: wait until the number of pending images
