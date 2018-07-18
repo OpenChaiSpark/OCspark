@@ -77,7 +77,7 @@ my $dir = dirname($ARGV[0]);
 
 my @files = getFiles($dir);
 
-##print "files: ", join("\n", sort { $a <=> $b } @files) . "\n";
+print "files: ", join("\n", sort { $a <=> $b } @files) . "\n" if ($config{DEBUG});
 
 my @images = filterImages(@files);
 my @jsons = filterJsons(@files);
@@ -102,10 +102,6 @@ if ($config{DELETE}) {
 ##  foreach my $json (@jsons) { unlink($json); }
   foreach my $json (@jsons) { print "unlink($json)\n"; }
 }
-
-#### Read in the earliest available json file.
-##
-##open($fh_json, "<", join("/", $dir, $jsons[0]));
 
 ## Note: the client (TfServer) will write {stdout + stderr} to its own final
 ## results file (foo.jpg.result).
