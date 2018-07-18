@@ -113,13 +113,13 @@ if ($config{DELETE}) {
 ## Read in all available json files.  Note: each one should already contain
 ## its own image name (say, as "foo.jpg:blah") in its stdout.
 
-my $content = join("|", map {
+my $content = join("|||RESULT|||", map {
   my $filename = $_;
   open(my $fh, "<", join("/", $dir, $filename));
   my $json_content = <$fh>;
   close($fh);
   (my $imagename = $filename) =~ s/\.json$//;
-  "$imagename:$json_content";
+  "$imagename|||PAIR|||$json_content";
 } @jsons);
 
 ## Now apply back pressure: wait until the number of pending images

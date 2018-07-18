@@ -104,14 +104,14 @@ object GpuStreaming {
           fatalGpu = true
           writeBytes(s"${li.value.outDir}/$fname.result",
             "FATAL ERROR".getBytes("ISO-8859-1"))
-        } else if (li.value.cmdResult.stdout.contains(":")) {
+        } else if (li.value.cmdResult.stdout.contains("|||PAIR|||")) {
           // Output comes from new app so contains one or more (pipe-separated) key-value
           // (colon-separated) pairs tying (previous) filenames to outputs.
           info(s"************** found concatenated result: ${li.value.cmdResult.stdout}")
-          val results = li.value.cmdResult.stdout.split("""\|""")
+          val results = li.value.cmdResult.stdout.split("""\|\|\|RESULT\|\|\|""")
           results.foreach { result =>
             info(s"*************** writing individual result: ${result}")
-            val pair = result.split(":")
+            val pair = result.split("""\|\|\|PAIR\|\|\|""")
             val actualName = pair(0)
             val actualStdout = pair(1)
             writeBytes(s"${li.value.outDir}/$actualName.result",
