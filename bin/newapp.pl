@@ -1,11 +1,13 @@
 #!/usr/local/bin/perl
 
 use strict;
+use Time::HiRes qw(usleep);
 
 my %config = (
               LOWER_THRESHOLD => 20,
               UPPER_THRESHOLD => 100,
               MAX_BATCH_SIZE => 2,
+              SLEEP_MICROSECONDS => 10000,
               DELETE => 0,
               DEBUG => 0
              );
@@ -124,7 +126,7 @@ my $content = join("|", map {
 ## is below the threshold.  (For now just use a dumb loop.)
 
 while (scalar(getImages($dir)) > $config{UPPER_THRESHOLD}) {
-  sleep 1;    # TODO: move to 1/100 second sleep
+  usleep($config{SLEEP_MICROSECONDS});
 }
 
 ## Finally emit the results and exit.
