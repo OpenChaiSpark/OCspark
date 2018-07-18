@@ -3,8 +3,11 @@
 use strict;
 
 my %config = (
-              BACKPRESSURE_THRESHOLD => 100,
-              DELETE => 0
+              LOWER_THRESHOLD => 20,
+              UPPER_THRESHOLD => 100,
+              MAX_BATCH_SIZE => 2,
+              DELETE => 0,
+              DEBUG => 0
              );
 
 ## 1. receive data and metadata comprising a new image from client via stdin
@@ -70,13 +73,24 @@ my $dir = dirname($ARGV[0]);
 
 ## Look in the result directory for any available json files.
 
-opendir my $dh, $dir or die "Could not open '$dir' for reading: $!\n";
-
-my @files = readdir $dh;
+my @files = getFiles($dir);
 
 ##print "files: ", join("\n", sort { $a <=> $b } @files) . "\n";
 
-my @jsons = grep { /\.json$/ } @files;
+my @images = filterImages(@files);
+my @jsons = filterJsons(@files);
+
+print "images: ", join(',', @images), "\n" if ($config{DEBUG});
+print "jsons: ", join(',', @jsons), "\n" if ($config{DEBUG});
+
+## Make sure we're not sending too many json files if we're in (presumed)
+## steady state (ie. not too many images queued up).
+
+if (scalar(@images) < $config{LOWER_THRESHOLD}) {
+  @jsons = @jsons[0..min($config{LOWER_THRESHOLD},scalar(@jsons))-1];
+}
+
+print "jsons after lower threshold: ", join(',', @jsons), "\n" if ($config{DEBUG});
 
 ## Delete the json files straight away, to minimize chance of a
 ## subsequent invocation finding the same files (since there's no
@@ -86,9 +100,6 @@ if ($config{DELETE}) {
 ##  foreach my $json (@jsons) { unlink($json); }
   foreach my $json (@jsons) { print "unlink($json)\n"; }
 }
-
-##print "jsons: ", join(',', @jsons), "\n";
-##print "first json: ", join(',', $jsons[0]), "\n";
 
 #### Read in the earliest available json file.
 ##
@@ -112,16 +123,43 @@ my $content = join("|", map {
 ## Now apply back pressure: wait until the number of pending images
 ## is below the threshold.  (For now just use a dumb loop.)
 
-my @images = grep { ! /\.json$/ } grep { ! /^\./ }  @files;
-##print "s:", join(',', @images), "\n";
-
-while (scalar(grep { ! /\.json$/ } @images) > $config{BACKPRESSURE_THRESHOLD}) {
+while (scalar(getImages($dir)) > $config{UPPER_THRESHOLD}) {
   sleep 1;    # TODO: move to 1/100 second sleep
 }
 
 ## Finally emit the results and exit.
 
 print STDOUT $content;
+
+
+exit;
+
+
+sub min {
+  my $a = shift;
+  my $b = shift;
+
+  $a < $b ? $a : $b;
+}
+
+
+sub getFiles {
+  my $dir = shift;
+
+  opendir my $dh, $dir or die "Could not open '$dir' for reading: $!\n";
+
+  my @files = readdir $dh;
+
+  close($dh);
+
+  @files;
+}
+
+sub filterImages { grep { ! /\.json$/ } grep { ! /^\./ } @_; }
+sub filterJsons { grep { /\.json$/ } @_; }
+
+sub getImages { filterImages(getFiles(@_)); }
+sub getJsons { filterJsons(getFiles(@_)); }
 
 
 
