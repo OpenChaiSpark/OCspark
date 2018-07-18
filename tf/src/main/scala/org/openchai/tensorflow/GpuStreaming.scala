@@ -96,17 +96,18 @@ object GpuStreaming {
           li.value.fpath
         }
         val fname = fileName(fp)
-        // MIKEP: v3.2: this is where we have to modify the fname by copying the tag inside res.
-        // But note: it looks like that's what already happens!!  fname is extracted from li.value.fpath!
-        // MIKEP: v3.5: this is also where we'll have to extract the packed results (if implemented in the app)
-        // and then loop over them, writing each out separately.
+        // MIKEP: modified to support outputs tagged with source, and concatenated outputs.
         val miketmp = li.value.outDir + "/" + li.value.fpath.split("/").last + ".result"
         info(s"******************* new name: ${miketmp}")
         if (li.value.cmdResult.isFatalError) {
+          // Process returned an error so doesn't matter what's inside it.
           fatalGpu = true
           writeBytes(s"${li.value.outDir}/$fname.result",
             "FATAL ERROR".getBytes("ISO-8859-1"))
-        } else {
+        } else if (li.value.cmdResult.stdout.contains(":")) {
+          // Output comes from new app so contains one or more (pipe-separated) key-value
+          // (colon-separated) pairs tying (previous) filenames to outputs.
+          info(s"************** found concatenated result: ${li.value.cmdResult.stdout}")
           val results = li.value.cmdResult.stdout.split("""\|""")
           results.foreach { result =>
             info(s"*************** writing individual result: ${result}")
@@ -116,6 +117,12 @@ object GpuStreaming {
             writeBytes(s"${li.value.outDir}/$actualName.result",
               (actualStdout + li.value.cmdResult.stderr).getBytes("ISO-8859-1"))
           }
+        } else {
+          // Output comes from traditional app so requires no special treatment: in particular
+          // we can use the existing file name.
+          info(s"*************** writing traditional result: ${li.value.cmdResult.stdout}")
+          writeBytes(s"${li.value.outDir}/$fname.result",
+            (li.value.cmdResult.stdout + li.value.cmdResult.stderr).getBytes("ISO-8859-1"))
         }
 //        writeBytes(s"${ li.value.outDir}/$fname.result",
 //          (if (li.value.cmdResult.isFatalError) {
