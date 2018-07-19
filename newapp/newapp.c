@@ -13,7 +13,7 @@
 #define DELETE 0
 #define DEBUG 0
 
-#define LEN(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
+//#define LEN(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
 
 char **getFilesOld(char *dir) {
   DIR *dp;
@@ -61,11 +61,11 @@ void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
   char **found = malloc(10000 * sizeof(char*));
 
   for (int i=0; i<nfiles; i++) {
-    char *image = files[i];
-    int len = strlen(image);
+    char *file = files[i];
+    int len = strlen(file);
 
-    if (len >= 5 && !strcmp(&image[len-5], ".json"))
-      found[n++] = strdup(image);
+    if (len >= 5 && !strcmp(&file[len-5], ".json"))
+      found[n++] = strdup(file);
   }
 
   *jsons = found;
@@ -77,11 +77,11 @@ void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
   char **found = malloc(10000 * sizeof(char*));
 
   for (int i=0; i<nfiles; i++) {
-    char *image = files[i];
-    int len = strlen(image);
+    char *file = files[i];
+    int len = strlen(file);
 
-    if (len > 2 && !(len >= 5 && !strcmp(&image[len-5], ".json")))
-      found[n++] = strdup(image);
+    if (len > 2 && !(len >= 5 && !strcmp(&file[len-5], ".json")))
+      found[n++] = strdup(file);
   }
 
   *jsons = found;
