@@ -56,23 +56,43 @@ void getFiles(char *dir, char ***files, int *nfiles) {
   *nfiles = n;
 }
 
-void filterJsons(char **images, int nimages, char ***jsons, int *njsons) {
+void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
   int n = 0;
-  char **images2 = malloc(10000 * sizeof(char*));
+  char **found = malloc(10000 * sizeof(char*));
 
-  for (int i=0; i<nimages; i++) {
-    char *image = images[i];
+  for (int i=0; i<nfiles; i++) {
+    char *image = files[i];
     int len = strlen(image);
 
     if (len >= 5) {
       const char *suffix = &image[len-5];
 
       if (!strcmp(suffix, ".json"))
-        images2[n++] = strdup(image);
+        found[n++] = strdup(image);
     }    
   }
 
-  *jsons = images2;
+  *jsons = found;
+  *njsons = n;
+}
+
+void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
+  int n = 0;
+  char **found = malloc(10000 * sizeof(char*));
+
+  for (int i=0; i<nfiles; i++) {
+    char *image = files[i];
+    int len = strlen(image);
+
+    if (len >= 5) {
+      const char *suffix = &image[len-5];
+
+      if (strcmp(suffix, ".json"))
+        found[n++] = strdup(image);
+    }    
+  }
+
+  *jsons = found;
   *njsons = n;
 }
 
@@ -93,12 +113,22 @@ int main(int argc, char **argv) {
 
   filterJsons(files, nfiles, &jsons, &njsons);
 
+  char **images;
+  int nimages;
+
+  filterImages(files, nfiles, &images, &nimages);
+
   int i;
 
   printf("NJSONS: %d\n", njsons);
   
   for (i=0; i<njsons; i++)
-    printf("FOUND: %s\n", jsons[i]);
+    printf("FOUND JSON: %s\n", jsons[i]);
+
+  printf("NIMAGES: %d\n", nimages);
+  
+  for (i=0; i<nimages; i++)
+    printf("FOUND IMAGE: %s\n", images[i]);
 
   printf("hello world\n");
 }
