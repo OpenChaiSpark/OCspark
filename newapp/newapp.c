@@ -13,30 +13,6 @@
 #define DELETE 0
 #define DEBUG 0
 
-//#define LEN(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
-
-char **getFilesOld(char *dir) {
-  DIR *dp;
-  struct dirent *ep;
-  char **files = malloc(10000 * sizeof(char*)); // TODO: reallocate every 1000 or so.
-
-  dp = opendir(dir);
-
-  if (dp != NULL) {
-    int i = 0;
-    while ((ep = readdir (dp))) {
-      files[i++] = strdup(ep->d_name);
-      puts(ep->d_name);
-    }
-    (void) closedir(dp);
-  } else {
-    perror("Couldn't open the directory");
-    exit(1);
-  }
-
-  return files;
-}
-
 void getFiles(char *dir, char ***files, int *nfiles) {
   DIR *dp;
   struct dirent *ep;
@@ -98,6 +74,10 @@ void getJsons(char *dir, char ***jsons, int *njsons) {
 
   (void) getFiles(dir, &files, &nfiles);
   (void) filterJsons(files, nfiles, jsons, njsons);
+
+  for (int i=0; i<nfiles; i++) free(files[i]);
+
+  free(files);
 }
 
 void getImages(char *dir, char ***images, int *nimages) {
@@ -106,6 +86,10 @@ void getImages(char *dir, char ***images, int *nimages) {
 
   (void) getFiles(dir, &files, &nfiles);
   (void) filterImages(files, nfiles, images, nimages);
+
+  for (int i=0; i<nfiles; i++) free(files[i]);
+
+  free(files);
 }
 
 
