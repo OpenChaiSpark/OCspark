@@ -77,10 +77,9 @@ void getFiles(char *dir, char ***files, int *nfiles) {
   dp = opendir(dir);
 
   if (dp != NULL) {
-    while ((ep = readdir (dp))) {
+    while ((ep = readdir (dp)))
       x[n++] = strdup(ep->d_name);
-      //      puts(ep->d_name);
-    }
+
     (void) closedir(dp);
   } else {
     perror("Couldn't open the directory");
