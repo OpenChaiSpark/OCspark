@@ -88,6 +88,23 @@ void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
   *njsons = n;
 }
 
+void getJsons(char *dir, char ***jsons, int *njsons) {
+  char **files;
+  int nfiles;
+
+  (void) getFiles(dir, &files, &nfiles);
+  (void) filterJsons(files, nfiles, jsons, njsons);
+}
+
+void getImages(char *dir, char ***images, int *nimages) {
+  char **files;
+  int nfiles;
+
+  (void) getFiles(dir, &files, &nfiles);
+  (void) filterImages(files, nfiles, images, nimages);
+}
+
+
 
 
 int main(int argc, char **argv) {
@@ -103,15 +120,18 @@ int main(int argc, char **argv) {
   char **jsons;
   int njsons;
 
-  filterJsons(files, nfiles, &jsons, &njsons);
+  (void) filterJsons(files, nfiles, &jsons, &njsons);
 
   char **images;
   int nimages;
 
-  filterImages(files, nfiles, &images, &nimages);
+  (void) filterImages(files, nfiles, &images, &nimages);
 
   int i;
 
+  (void) getJsons(dir, &jsons, &njsons);
+  (void) getImages(dir, &images, &nimages);
+  
   printf("NJSONS: %d\n", njsons);
   
   for (i=0; i<njsons; i++)
