@@ -20,7 +20,7 @@ char **getFilesOld(char *dir) {
   struct dirent *ep;
   char **files = malloc(10000 * sizeof(char*)); // TODO: reallocate every 1000 or so.
 
-  dp = opendir("./");
+  dp = opendir(dir);
 
   if (dp != NULL) {
     int i = 0;
@@ -29,8 +29,10 @@ char **getFilesOld(char *dir) {
       puts(ep->d_name);
     }
     (void) closedir(dp);
-  } else
+  } else {
     perror("Couldn't open the directory");
+    exit(1);
+  }
 
   return files;
 }
@@ -41,16 +43,18 @@ void getFiles(char *dir, char ***files, int *nfiles) {
   char **x = malloc(10000 * sizeof(char*)); // TODO: reallocate every 1000 or so.
   int n = 0;
 
-  dp = opendir("./");
+  dp = opendir(dir);
 
   if (dp != NULL) {
     while ((ep = readdir (dp))) {
       x[n++] = strdup(ep->d_name);
-      puts(ep->d_name);
+      //      puts(ep->d_name);
     }
     (void) closedir(dp);
-  } else
+  } else {
     perror("Couldn't open the directory");
+    exit(1);
+  }
 
   *files = x;
   *nfiles = n;
@@ -108,8 +112,19 @@ void getImages(char *dir, char ***images, int *nimages) {
 
 
 int main(int argc, char **argv) {
-  char *filename = argv[0];
+  char *filename = argv[1];
+
+  if (!filename) {
+    perror("No filename argument");
+    exit(1);
+  }
+
+  printf("filename: %s\n", filename);
+
   char *dir = dirname(filename);
+
+  printf("dir: %s\n", dir);
+
   char **files;
   int nfiles;
 
