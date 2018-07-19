@@ -64,12 +64,8 @@ void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
     char *image = files[i];
     int len = strlen(image);
 
-    if (len >= 5) {
-      const char *suffix = &image[len-5];
-
-      if (!strcmp(suffix, ".json"))
-        found[n++] = strdup(image);
-    }    
+    if (len >= 5 && !strcmp(&image[len-5], ".json"))
+      found[n++] = strdup(image);
   }
 
   *jsons = found;
@@ -84,12 +80,8 @@ void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
     char *image = files[i];
     int len = strlen(image);
 
-    if (len >= 5) {
-      const char *suffix = &image[len-5];
-
-      if (strcmp(suffix, ".json"))
-        found[n++] = strdup(image);
-    }    
+    if (len > 2 && !(len >= 5 && !strcmp(&image[len-5], ".json")))
+      found[n++] = strdup(image);
   }
 
   *jsons = found;
