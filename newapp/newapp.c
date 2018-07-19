@@ -163,7 +163,7 @@ char *readFile(char *filename) {
 
   long len = ftell(file);
 
-  fseek(file, 0, SEEK_SET);  //same as rewind(f);
+  fseek(file, 0, SEEK_SET);
 
   char *string = malloc(len + 1);
 

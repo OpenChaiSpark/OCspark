@@ -1,5 +1,7 @@
 #!/usr/local/bin/perl
 
+## THIS SCRIPT IS DEPRECATED IN FAVOR OF newapp/newapp.c
+
 use strict;
 use Time::HiRes qw(usleep);
 
