@@ -263,7 +263,6 @@ int main(int argc, char **argv) {
   // Read in all available json files and concatenate their confent.
 
   char *content = (char*) NULL;
-  int dirlen = strlen(dir);
 
   for (int i=0; i<njsons; i++) {
     char *json = jsons[i];
@@ -275,16 +274,11 @@ int main(int argc, char **argv) {
     free(json_path);
 
     char *json_pair = concat(json, "|||PAIR|||", json_content);
+    char *new_content = content ?
+      concat(content, "|||RESULT|||", json_pair) : strdup(json_pair);
 
-    char *new_content;
-
-    if (content)
-      new_content = concat(content, "|||RESULT|||", json_pair);
-    else
-      new_content = strdup(json_pair);
-
-    free(content);
     free(json_pair);
+    free(content);
 
     content = new_content;
   }
