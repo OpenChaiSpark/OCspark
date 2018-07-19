@@ -89,7 +89,7 @@ print "jsons: ", join(',', @jsons), "\n" if ($config{DEBUG});
 ## steady state (ie. not too many images queued up).
 
 if (scalar(@images) < $config{LOWER_THRESHOLD}) {
-  @jsons = @jsons[0..min($config{LOWER_THRESHOLD},scalar(@jsons))-1];
+  @jsons = @jsons[0..min($config{MAX_BATCH_SIZE},scalar(@jsons))-1];
 }
 
 print "jsons after lower threshold: ", join(',', @jsons), "\n" if ($config{DEBUG});
@@ -103,11 +103,10 @@ if ($config{DELETE}) {
   foreach my $json (@jsons) { print "unlink($json)\n"; }
 }
 
-## Note: the client (TfServer) will write {stdout + stderr} to its own final
-## results file (foo.jpg.result).
+## Note: the client (TfServer) will write {stdout + stderr} to its own
+## final results file (foo.jpg.result).
 
-## Read in all available json files.  Note: each one should already contain
-## its own image name (say, as "foo.jpg:blah") in its stdout.
+## Read in all available json files and concatenate their confent.
 
 my $content = join("|||RESULT|||", map {
   my $filename = $_;
