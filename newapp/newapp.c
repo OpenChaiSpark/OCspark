@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 enum {
       LOWER_THRESHOLD = 20,
@@ -15,6 +16,15 @@ enum {
       SLEEP_MICROSECONDS = 10000,
       DELETE = 0,
       DEBUG = 0
+};
+
+struct Stats
+{
+  int total_time;
+  int delay_time;
+  int processed_results;
+  int pending_results;
+  int pending_images;
 };
 
 // 1. receive data and metadata comprising a new image from client via stdin
@@ -192,11 +202,27 @@ char *concat(char *left, char *sep, char *right) {
   return string;
 }
 
+int deltaMS(struct timeval start, struct timeval stop) {
+  return ((stop.tv_sec - start.tv_sec)*1000000L + stop.tv_usec) - start.tv_usec;
+}
+
+int timeMS(struct timeval start) {
+  struct timeval stop;
+
+  gettimeofday(&stop, NULL);
+
+  return deltaMS(start, stop);
+}
+
 
 // Entry point.
 
 int main(int argc, char **argv) {
+  struct Stats stats;
   char *filename = argv[1];
+  struct timeval total_start;
+
+  gettimeofday(&total_start, NULL);
 
   if (!filename) {
     perror("No filename argument");
@@ -245,6 +271,8 @@ int main(int argc, char **argv) {
 
     njsons = minimum;
   }
+
+  stats.processed_results = njsons;
 
   if (DEBUG) printf("njsons (post batching): %d\n", njsons);
 
@@ -298,10 +326,20 @@ int main(int argc, char **argv) {
   }
 
   // Now apply back pressure: wait until the number of pending images
-  // is below the threshold.  (For now just use a dumb loop.)
+  // is below the threshold.  (For now just use a dumb loop.)  Also
+  // record the total time delaying.
 
-  while (numImages(dir) > UPPER_THRESHOLD)
+  struct timeval delay_start;
+
+  gettimeofday(&delay_start, NULL);
+
+  int pending_images;
+
+  while ((pending_images = numImages(dir)) > UPPER_THRESHOLD)
     usleep(SLEEP_MICROSECONDS);
+
+  stats.pending_images = pending_images;
+  stats.delay_time = timeMS(delay_start);
 
   // Last-minute check for surviving json files (re-read beacuse more
   // may have been added since last read).
@@ -310,7 +348,21 @@ int main(int argc, char **argv) {
 
   if (njsons > ALERTING_LIMIT)
     fprintf(stderr, "Alert: %d result files pending", njsons);
-  
+
+  stats.pending_results = njsons;
+
+  // Record the total time.
+
+  stats.total_time = timeMS(total_start);
+
+  // Emit the stats.
+
+  fprintf(stderr, "total time (us): %d\n", stats.total_time);
+  fprintf(stderr, "delay time (us): %d\n", stats.delay_time);
+  fprintf(stderr, "pending results: %d\n", stats.pending_results);
+  fprintf(stderr, "pending images: %d\n", stats.pending_images);
+  fprintf(stderr, "processed results: %d\n", stats.processed_results);
+
   // Finally emit the results and exit.
 
   printf("%s", content);
