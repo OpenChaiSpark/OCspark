@@ -8,15 +8,16 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-enum {
-      LOWER_THRESHOLD = 20,
-      UPPER_THRESHOLD = 100,
-      MAX_BATCH_SIZE = 2,
-      ALERTING_LIMIT = 10,
-      SLEEP_MICROSECONDS = 10000,
-      DELETE = 0,
-      DEBUG = 0
-};
+#define LOWER_THRESHOLD 20
+#define UPPER_THRESHOLD 100
+#define MAX_BATCH_SIZE 2
+#define ALERTING_LIMIT 10
+#define SLEEP_MICROSECONDS 10000
+#define MEMORY_INCREMENT_BYTES 10000
+#define RESULT_SEPARATOR "|||RESULT|||"
+#define PAIR_SEPARATOR "|||PAIR|||"
+#define DELETE 0
+#define DEBUG 0
 
 struct Stats
 {
@@ -82,14 +83,18 @@ struct Stats
 void getFiles(char *dir, char ***files, int *nfiles) {
   DIR *dp;
   struct dirent *ep;
-  char **x = (char**) malloc(10000 * sizeof(char*)); // TODO: reallocate every 1000 or so.
+  char **x = (char**) malloc(MEMORY_INCREMENT_BYTES * sizeof(char*));
   int n = 0;
 
   dp = opendir(dir);
 
   if (dp != NULL) {
-    while ((ep = readdir (dp)))
+    while ((ep = readdir (dp))) {
+      if (n > 0 && n % MEMORY_INCREMENT_BYTES == 0)
+        x = (char**) realloc(x, (n + MEMORY_INCREMENT_BYTES) * sizeof(char*));
+
       x[n++] = strdup(ep->d_name);
+    }
 
     (void) closedir(dp);
   } else {
@@ -102,15 +107,19 @@ void getFiles(char *dir, char ***files, int *nfiles) {
 }
 
 void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
-  char **found = (char**) malloc(10000 * sizeof(char*));
+  char **found = (char**) malloc(MEMORY_INCREMENT_BYTES * sizeof(char*));
   int n = 0;
 
   for (int i=0; i<nfiles; i++) {
     char *file = files[i];
     int len = strlen(file);
 
-    if (len >= 5 && !strcmp(&file[len-5], ".json"))
+    if (len >= 5 && !strcmp(&file[len-5], ".json")) {
+      if (n > 0 && n % MEMORY_INCREMENT_BYTES == 0)
+        found = (char**) realloc(found, (n + MEMORY_INCREMENT_BYTES) * sizeof(char*));
+
       found[n++] = strdup(file);
+    }
   }
 
   *jsons = found;
@@ -118,15 +127,19 @@ void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
 }
 
 void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
+  char **found = (char**) malloc(MEMORY_INCREMENT_BYTES * sizeof(char*));
   int n = 0;
-  char **found = (char**) malloc(10000 * sizeof(char*));
 
   for (int i=0; i<nfiles; i++) {
     char *file = files[i];
     int len = strlen(file);
 
-    if (len > 2 && !(len >= 5 && !strcmp(&file[len-5], ".json")))
+    if (len > 2 && !(len >= 5 && !strcmp(&file[len-5], ".json"))) {
+      if (n > 0 && n % MEMORY_INCREMENT_BYTES == 0)
+        found = (char**) realloc(found, (n + MEMORY_INCREMENT_BYTES) * sizeof(char*));
+
       found[n++] = strdup(file);
+    }
   }
 
   *jsons = found;
@@ -310,14 +323,14 @@ int main(int argc, char **argv) {
 
     // Create the (filename, content) pair.
   
-    char *json_pair = concat(json_stem, "|||PAIR|||", json_content);
+    char *json_pair = concat(json_stem, PAIR_SEPARATOR, json_content);
 
     free(json_stem);
 
     // Append the new pair to the list of pairs.
 
     char *new_content = content ?
-      concat(content, "|||RESULT|||", json_pair) : strdup(json_pair);
+      concat(content, RESULT_SEPARATOR, json_pair) : strdup(json_pair);
 
     free(json_pair);
     free(content);
