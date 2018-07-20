@@ -11,6 +11,7 @@ enum {
       LOWER_THRESHOLD = 20,
       UPPER_THRESHOLD = 100,
       MAX_BATCH_SIZE = 2,
+      ALERTING_LIMIT = 10,
       SLEEP_MICROSECONDS = 10000,
       DELETE = 0,
       DEBUG = 0
@@ -302,9 +303,16 @@ int main(int argc, char **argv) {
   while (numImages(dir) > UPPER_THRESHOLD)
     usleep(SLEEP_MICROSECONDS);
 
+  // Last-minute check for surviving json files (re-read beacuse more
+  // may have been added since last read).
+
+  getJsons(dir, &jsons, &njsons);
+
+  if (njsons > ALERTING_LIMIT)
+    fprintf(stderr, "Alert: %d result files pending", njsons);
+  
   // Finally emit the results and exit.
 
-  fprintf(stderr, "this is a test");
   printf("%s", content);
 }
 
