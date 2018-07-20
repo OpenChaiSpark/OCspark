@@ -71,7 +71,7 @@ enum {
 void getFiles(char *dir, char ***files, int *nfiles) {
   DIR *dp;
   struct dirent *ep;
-  char **x = malloc(10000 * sizeof(char*)); // TODO: reallocate every 1000 or so.
+  char **x = (char**) malloc(10000 * sizeof(char*)); // TODO: reallocate every 1000 or so.
   int n = 0;
 
   dp = opendir(dir);
@@ -91,7 +91,7 @@ void getFiles(char *dir, char ***files, int *nfiles) {
 }
 
 void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
-  char **found = malloc(10000 * sizeof(char*));
+  char **found = (char**) malloc(10000 * sizeof(char*));
   int n = 0;
 
   for (int i=0; i<nfiles; i++) {
@@ -108,7 +108,7 @@ void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
 
 void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
   int n = 0;
-  char **found = malloc(10000 * sizeof(char*));
+  char **found = (char**) malloc(10000 * sizeof(char*));
 
   for (int i=0; i<nfiles; i++) {
     char *file = files[i];
@@ -164,7 +164,7 @@ char *readFile(char *filename) {
 
   fseek(file, 0, SEEK_SET);
 
-  char *string = malloc(len + 1);
+  char *string = (char*) malloc(len + 1);
 
   fread(string, len, 1, file);
   fclose(file);
@@ -179,7 +179,7 @@ char *concat(char *left, char *sep, char *right) {
   int sep_len = strlen(sep);
   int right_len = strlen(right);
   int len = left_len + sep_len + right_len + 1;
-  char *string = malloc(len * sizeof(char));
+  char *string = (char*) malloc(len * sizeof(char));
 
   int string_len = snprintf(string, len, "%s%s%s", left, sep, right);
 
