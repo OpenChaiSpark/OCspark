@@ -91,8 +91,8 @@ void getFiles(char *dir, char ***files, int *nfiles) {
 }
 
 void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
-  int n = 0;
   char **found = malloc(10000 * sizeof(char*));
+  int n = 0;
 
   for (int i=0; i<nfiles; i++) {
     char *file = files[i];
@@ -272,7 +272,21 @@ int main(int argc, char **argv) {
 
     free(json_path);
 
-    char *json_pair = concat(json, "|||PAIR|||", json_content);
+    // Stem the json filename (to drop off the ".json" suffix).
+  
+    int json_len = strlen(json);
+    char *json_stem = strdup(json);
+
+    json_stem[json_len - 5] = '\0';
+
+    // Create the (filename, content) pair.
+  
+    char *json_pair = concat(json_stem, "|||PAIR|||", json_content);
+
+    free(json_stem);
+
+    // Append the new pair to the list of pairs.
+
     char *new_content = content ?
       concat(content, "|||RESULT|||", json_pair) : strdup(json_pair);
 
@@ -290,6 +304,7 @@ int main(int argc, char **argv) {
 
   // Finally emit the results and exit.
 
+  fprintf(stderr, "this is a test");
   printf("%s", content);
 }
 
