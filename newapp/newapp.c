@@ -16,8 +16,8 @@
 #define MEMORY_INCREMENT_BYTES 10000
 #define RESULT_SEPARATOR "|||RESULT|||"
 #define PAIR_SEPARATOR "|||PAIR|||"
-#define DELETE 0
-#define DEBUG 0
+#define DELETE 1
+#define DEBUG 1
 
 struct Stats
 {
@@ -190,7 +190,13 @@ char *readFile(char *filename) {
 
   char *string = (char*) malloc(len + 1);
 
-  fread(string, len, 1, file);
+  long s = fread(string, len, 1, file);
+
+  if (s != 1) {
+    fprintf(stderr, "Failed to read from %s\n", filename);
+    exit(1);
+  }
+
   fclose(file);
 
   string[len] = 0;
@@ -278,7 +284,7 @@ int main(int argc, char **argv) {
   // (presumed) steady state (ie. not too many images queued up).
 
   if (nimages < LOWER_THRESHOLD) {
-    int minimum = MAX_BATCH_SIZE < njsons ? LOWER_THRESHOLD : njsons;
+    int minimum = MAX_BATCH_SIZE < njsons ? MAX_BATCH_SIZE : njsons;
 
     for (int i=minimum; i<njsons; i++) free(jsons[i]);
 
@@ -288,15 +294,6 @@ int main(int argc, char **argv) {
   stats.processed_results = njsons;
 
   if (DEBUG) printf("njsons (post batching): %d\n", njsons);
-
-  // Delete the json files straight away, to minimize chance of a
-  // subsequent invocation finding the same files (since there's no
-  // other mechanism (eg. lock file) to prevent that happening).
-
-  if (DELETE)
-    for (int i=0; i<njsons; i++)
-      //      remove(jsons[i]);
-      printf("Would have removed: %s\n", jsons[i]);
 
   // Note: the client (TfServer) will write {stdout + stderr} to its
   // own final results file (foo.jpg.result).
@@ -321,11 +318,15 @@ int main(int argc, char **argv) {
 
     json_stem[json_len - 5] = '\0';
 
+    if (DEBUG) printf("Stemmed json content: %s\n", json_stem);
+
     // Create the (filename, content) pair.
   
     char *json_pair = concat(json_stem, PAIR_SEPARATOR, json_content);
 
     free(json_stem);
+
+    if (DEBUG) printf("Paired json content: %s\n", json_pair);
 
     // Append the new pair to the list of pairs.
 
@@ -336,7 +337,24 @@ int main(int argc, char **argv) {
     free(content);
 
     content = new_content;
+
+    if (DEBUG) printf("Appended json pair: %s\n", content);
   }
+
+  // Delete the json files straight away, to minimize chance of a
+  // subsequent invocation finding the same files (since there's no
+  // other mechanism (eg. lock file) to prevent that happening).
+
+  if (DELETE)
+    for (int i=0; i<njsons; i++) {
+      char *json = jsons[i];
+      char *json_path = concat(dir, "/", json);
+
+      if (DEBUG) printf("Deleting %s\n", json_path);
+
+      //remove(json_path);
+      printf("Would have removed: %s\n", json_path);
+    }
 
   // Now apply back pressure: wait until the number of pending images
   // is below the threshold.  (For now just use a dumb loop.)  Also
@@ -353,6 +371,8 @@ int main(int argc, char **argv) {
 
   stats.pending_images = pending_images;
   stats.delay_time = timeMS(delay_start);
+
+  if (DEBUG) printf("Got delay time: %d\n", stats.delay_time);
 
   // Last-minute check for surviving json files (re-read beacuse more
   // may have been added since last read).
