@@ -17,7 +17,7 @@
 #define RESULT_SEPARATOR "|||RESULT|||"
 #define PAIR_SEPARATOR "|||PAIR|||"
 #define DELETE 1
-#define DEBUG 1
+#define DEBUG 0
 
 struct Stats
 {
