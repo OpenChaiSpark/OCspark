@@ -350,10 +350,11 @@ int main(int argc, char **argv) {
       char *json = jsons[i];
       char *json_path = concat(dir, "/", json);
 
-      if (DEBUG) printf("Deleting %s\n", json_path);
+      remove(json_path);
 
-      //remove(json_path);
-      printf("Would have removed: %s\n", json_path);
+      free(json_path);
+
+      if (DEBUG) printf("Deleted %s\n", json_path);
     }
 
   // Now apply back pressure: wait until the number of pending images
