@@ -45,7 +45,7 @@ sudo cp ${GITDIR}/bin/runtfserver.sh ${TARGET}/
 
 ## Make run script executable.
 
-chmod +x ${TARGET}/runtfserver.sh
+sudo chmod +x ${TARGET}/runtfserver.sh
 
 ## Added by me to avoid (caught) exception on server start.  Actual
 ## value (ie. "localhost") seems to be arbitrary.
