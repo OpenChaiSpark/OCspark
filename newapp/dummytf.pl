@@ -1,29 +1,49 @@
 #!/usr/local/bin/perl
-
-use IO::Select;
-use Mac::FSEvents;
 use Time::HiRes qw(gettimeofday usleep);
 
-my $fs = Mac::FSEvents->new(path => './dummy/tmp', file_events => 1);
-my $fh = $fs->watch;
-my $sel = IO::Select->new($fh);
+my %config = (
+              IMAGEDIR => "./dummy/tmp",
+              FSEVENTS => 0,
+              DEBUG => 0
+             );
 
-while ($sel->can_read) {
-  my @events = $fs->read_events;
+if ($config{FSEVENTS}) {
+  use IO::Select;
+  use Mac::FSEvents;
 
-  for my $event (@events) {
-    my $input = $event->path;
+  my $fs = Mac::FSEvents->new(path => $config{IMAGEDIR}, file_events => 1);
+  my $fh = $fs->watch;
+  my $sel = IO::Select->new($fh);
 
-    if ($input =~ /\.jpg$/) {
-##      (my $output = $input) =~ s/\/tmp\/([^\/]+)$/\/output\/$1.result/;
-      my $output = join(".", $input, "result");
+  sub react {
+    my $pid = fork();
 
-      printf "Input: %s Output: %s\n", $input, $output;
+    return if $pid;
 
-      react($input, $output);
+    close STDIN;
+    close STDOUT;
+
+    processImage(@_);
+
+    exit;
+  }
+
+  while ($sel->can_read) {
+    my @images = grep { /\.jpe?g$/ } map { $_->path } $fs->read_events;
+
+    for my $image (@images) {
+      react($image);
     }
   }
+} else {
+  while (1) {
+    my $input = getLatestImage($config{IMAGEDIR});
+
+    processImage($input) if ($input);
+  }
 }
+
+
 
 ## Return time of day in microseconds.
 
@@ -40,16 +60,40 @@ sub fixedTask {
   }
 }
 
-sub react {
+## Returns a list of available files, sorted by last modification date.
+
+sub getFiles {
+  my $dir = shift;
+
+  opendir my $dh, $dir or die "Could not open '$dir' for reading: $!\n";
+
+  my @files = sort {(stat $a)[9] <=> (stat $b)[9]}
+    map { join("/", $dir, $_) } readdir($dh);
+
+  close($dh);
+
+  @files;
+}
+
+sub filterImages { grep { /\.jpe?g$/ } @_; }
+sub filterJsons { grep { /\.json$/ } @_; }
+
+sub getImages { filterImages(getFiles(@_)); }
+sub getJsons { filterJsons(getFiles(@_)); }
+
+sub getLatestImage {
+  my @images = getImages(@_);
+
+  pop @images;
+}
+
+sub processImage {
   my $input = shift;
-  my $output = shift;
 
-  my $pid = fork();
+##  (my $output = $input) =~ s/\/tmp\/([^\/]+)$/\/output\/$1.result/;
+  my $output = join(".", $input, "result");
 
-  return if $pid;
-
-  close STDIN;
-  close STDOUT;
+  printf "Input: %s Output: %s\n", $input, $output;
 
   my $t1 = microTime();
 
@@ -59,9 +103,8 @@ sub react {
   my $t2 = microTime();
 
   open(FH, ">", "$output");
-  print FH "elapsed: " . ($t2 - $t1) . "\n";
+  print FH "$input: " . ($t2 - $t1) . "\n";
   close(FH);
 
-  exit;
+  unlink($input);
 }
-
