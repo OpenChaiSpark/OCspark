@@ -533,7 +533,7 @@ function deploy-shared {
      stty echo
      echo $passwd
      tar -cz ${shared_dir}) |
-        ssh ${ip} "sudo -S bash -c \"cd /froggy && tar -xz\"" ||
+        ssh ${ip} "sudo -S bash -c \"cd / && tar -xz\"" ||
         abort "rsync of shared dir failed"
 }
 
