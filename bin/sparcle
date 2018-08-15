@@ -83,7 +83,13 @@ function remote-op {
 
 ## ----------------------------------------------------------------------------
 ## Apply a function to all hosts in an IP file (can contain multiple
-## slaves and/or one (at most) master).
+## slaves and/or one (at most) master).  Note: we use FD 3 in the
+## while read (instead of stdin) to prevent ssh from slurping the
+## whole of the input file on its first invocation.  (Alternatively we
+## could use "ssh -n" in remote-op() but that would prevent us from
+## using remote-op to send data to the remote hosts (eg. public keys,
+## tarballs), so using a different FD in the read avoids the slurping
+## problem and allows us to pass stdin through ssh when we want to.
 ## ----------------------------------------------------------------------------
 
 function remote-cluster-op {
@@ -96,7 +102,7 @@ function remote-cluster-op {
 
     got_master="no"
 
-    while read -r line; do
+    while read -u 3 -r line; do
         ip=$(echo $line | cut -f1 -d " ")
         class=$(echo $line | cut -f2 -d " ")
 
@@ -112,7 +118,7 @@ function remote-cluster-op {
         else
             abort "Found unexpected host class '${class}' in supplied IP file '${ip_file}' (expecting 'slave' or 'master')"
         fi
-    done < ${ip_file}
+    done 3< <(cat ${ip_file} | egrep -v "^#")
 }
 
 ## ----------------------------------------------------------------------------
@@ -130,7 +136,7 @@ function remote-cluster-op {
 ##    ssh -o ControlPath...
 
 ## Need to make ${USER} evaluate to mike (ie. im the local shell
-## *before* the function is declared and invoced by the remote shell).
+## *before* the function is declared and invoked by the remote shell).
 
 function adopt {
     echo sudo adduser ${USER} || abort "adduser failed"
@@ -138,8 +144,15 @@ function adopt {
 }
 
 function adopt-host { remote-op adopt $1 nvidia; }
-
 function adopt-cluster { remote-cluster-op adopt-host adopt-host $@; }
+
+## ----------------------------------------------------------------------------
+## Identify a host.
+## ----------------------------------------------------------------------------
+
+function identify { uname -a; }
+function identify-host { remote-op identify $1; }
+function identify-cluster { remote-cluster-op identify-host identify-host $@; }
 
 ## ----------------------------------------------------------------------------
 ## Add public ssh keys to new user on the specified host.
@@ -558,7 +571,17 @@ function deploy-shared-to-cluster {
 
 TASK=$1
 
-if [ "${TASK}" == "adopt" ]; then
+if [ "${TASK}" == "identify" ]; then
+    identify
+elif [ "${TASK}" == "identify-host" ]; then
+    IP=$2
+
+    identify-host "${IP}"
+elif [ "${TASK}" == "identify-cluster" ]; then
+    IP_FILE=$2
+
+    identify-cluster "${IP_FILE}"
+elif [ "${TASK}" == "adopt" ]; then
     adopt
 elif [ "${TASK}" == "adopt-host" ]; then
     IP=$2
