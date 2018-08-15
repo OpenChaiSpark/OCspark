@@ -87,9 +87,9 @@ function remote-op {
 ## ----------------------------------------------------------------------------
 
 function remote-cluster-op {
-    master_callback=$1
-    slave_callback=$2
-    ip_file=$3
+    master_callback=$1; shift
+    slave_callback=$1; shift
+    ip_file=$1; shift
 
     [ "${ip_file}" == "" ] && abort "No IP file supplied"
     [ -e ${ip_file} ] || abort "Supplied IP file '${ip_file}' not found"
@@ -101,14 +101,14 @@ function remote-cluster-op {
         class=$(echo $line | cut -f2 -d " ")
 
         if [ "${class}" == "slave" ]; then
-            [ "${slave_callback}" != "" ] && ${slave_callback} ${ip}
+            [ "${slave_callback}" != "" ] && ${slave_callback} ${ip} "$@"
         elif [ "${class}" == "master" ]; then
             [ "got_master" == "yes" ] &&\
                 abort "Found more than one master in supplied IP file '${ip_file}'"
 
             got_master="yes"
 
-            [ "${master_callback}" != "" ] && ${master_callback} ${ip}
+            [ "${master_callback}" != "" ] && ${master_callback} ${ip} "$@"
         else
             abort "Found unexpected host class '${class}' in supplied IP file '${ip_file}' (expecting 'slave' or 'master')"
         fi
@@ -381,7 +381,7 @@ function stop-remote-cluster { remote-cluster-op stop-remote-master start-remote
 function adopt-remote-cluster { remote-cluster-op adopt-remote-host adopt-remote-host $@; }
 
 ## ----------------------------------------------------------------------------
-## Create a gpu-slaves.txt file.  Note: increments a local
+## Create a gpu-slaves.txt file.  Note: we increment a local
 ## slave_number variable to assign ports.
 ## ----------------------------------------------------------------------------
 
@@ -462,7 +462,7 @@ connections:
   gpuRegistryPort: "${GPU_REGISTRY_PORT}"
 defaults:
   apps:
-    test-local:
+    ${APP_NAME}:
       cmdline: ${OCSPARK}/newapp/newapp ${ip}
       rundir: ${DATA_DIR}/run
       tmpdir: ${DATA_DIR}/tmp
@@ -510,9 +510,38 @@ function make-shared {
     cp ${OCSPARK}/bin/runtfserver.sh ${shared_dir}/ ||
         abort "copy runtfserver.sh failed"
 
-    chmod +x ${shared_dir}/runtfserver.sh
+    chmod +x ${shared_dir}/runtfserver.sh ||
+        abort "can't chmod runtfserver.sh"
 
-    echo "localhost" > ${shared_dir}/conf/hostname
+    echo "localhost" > ${shared_dir}/conf/hostname ||
+        abort "can't create conf/hostname"
+}
+
+
+## ----------------------------------------------------------------------------
+## Deploy a shared directory.
+## ----------------------------------------------------------------------------
+
+function deploy-shared {
+    ip=$1
+    shared_dir=$2
+
+    [[ -d ${shared_dir} ]] || abort "can't find shared dir"
+
+    (stty -echo
+     read passwd
+     stty echo
+     echo $passwd
+     tar -cz ${shared_dir}) |
+        ssh ${ip} "sudo -S bash -c \"cd /froggy && tar -xz\"" ||
+        abort "rsync of shared dir failed"
+}
+
+function deploy-shared-to-cluster {
+    ip_file=$1
+    shared_dir=$2
+
+    remote-cluster-op deploy-shared deploy-shared "${ip_file}" "${shared_dir}"
 }
 
 
@@ -551,6 +580,21 @@ elif [ "${TASK}" == "shared" ]; then
     SHARED_DIR=$3
 
     make-shared "${IP_FILE}" "${SHARED_DIR}"
+elif [ "${TASK}" == "deploy-shared" ]; then
+    IP=$2
+    SHARED_DIR=$3
+
+    deploy-shared "${IP}" "${SHARED_DIR}"
+elif [ "${TASK}" == "deploy-shared-to-cluster" ]; then
+    IP_FILE=$2
+    SHARED_DIR=$3
+
+    deploy-shared-to-cluster "${IP_FILE}" "${SHARED_DIR}"
+elif [ "${TASK}" == "deploy-shared" ]; then
+    IP=$2
+    SHARED_DIR=$3
+
+    deploy-shared "${IP}" "${SHARED_DIR}"
 elif [ "${TASK}" == "setup" ]; then
     CLASS=$2
 
