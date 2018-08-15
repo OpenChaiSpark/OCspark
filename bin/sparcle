@@ -132,24 +132,32 @@ function remote-cluster-op {
 ## Need to make ${USER} evaluate to mike (ie. im the local shell
 ## *before* the function is declared and invoced by the remote shell).
 
-function adopt-host {
+function adopt {
     echo sudo adduser ${USER} || abort "adduser failed"
     echo sudo usermod -aG sudo ${USER} || abort "usermod failed"
 }
 
-function adopt-remote-host { remote-op adopt-host $1 nvidia; }
+function adopt-host { remote-op adopt $1 nvidia; }
 
-function authorize-ssh {
+function adopt-cluster { remote-cluster-op adopt-host adopt-host $@; }
+
+## ----------------------------------------------------------------------------
+## Add public ssh keys to new user on the specified host.
+## ----------------------------------------------------------------------------
+
+function authorize {
     mkdir -p ${HOME}/.ssh || abort "make ssh dir failed"
     cat >> ${HOME}/.ssh/authorized_keys || abort "append ssh keys failed"
 }
 
-function authorize-remote-ssh {
+function authorize-host {
     [ -e "${HOME}/.ssh/id_dsa.pub" ] || abort "No DSA public key found"
     [ -e "${HOME}/.ssh/id_rsa.pub" ] || abort "No RSA public key found"
 
-    cat ${HOME}/.ssh/id_dsa.pub ${HOME}/.ssh/id_rsa.pub | remote-op authorize-ssh $1
+    cat ${HOME}/.ssh/id_dsa.pub ${HOME}/.ssh/id_rsa.pub | remote-op authorize $1
 }
+
+function authorize-cluster { remote-cluster-op authorize-host authorize-host $@; }
 
 ## ----------------------------------------------------------------------------
 ## Install java.
@@ -378,7 +386,6 @@ function stop-remote-master { remote-op stop-master $1; }
 
 function start-remote-cluster { remote-cluster-op start-remote-master start-remote-slave $@; }
 function stop-remote-cluster { remote-cluster-op stop-remote-master start-remote-slave $@; }
-function adopt-remote-cluster { remote-cluster-op adopt-remote-host adopt-remote-host $@; }
 
 ## ----------------------------------------------------------------------------
 ## Create a gpu-slaves.txt file.  Note: we increment a local
@@ -533,7 +540,7 @@ function deploy-shared {
      stty echo
      echo $passwd
      tar -cz ${shared_dir}) |
-        ssh ${ip} "sudo -S bash -c \"cd / && tar -xz\"" ||
+        ssh ${ip} "sudo -S bash -c \"cd /froggy && tar -xz\"" ||
         abort "rsync of shared dir failed"
 }
 
@@ -552,14 +559,23 @@ function deploy-shared-to-cluster {
 TASK=$1
 
 if [ "${TASK}" == "adopt" ]; then
+    adopt
+elif [ "${TASK}" == "adopt-host" ]; then
     IP=$2
 
-    adopt-remote-host "${IP}"
-    authorize-remote-ssh "${IP}"
+    adopt-host "${IP}"
 elif [ "${TASK}" == "adopt-cluster" ]; then
     IP_FILE=$2
 
-    adopt-remote-cluster "${IP_FILE}"
+    adopt-cluster "${IP_FILE}"
+elif [ "${TASK}" == "authorize-host" ]; then
+    IP=$2
+
+    authorize-host "${IP}"
+elif [ "${TASK}" == "authorize-cluster" ]; then
+    IP_FILE=$2
+
+    authorize-cluster "${IP_FILE}"
 elif [ "${TASK}" == "gpu-slaves" ]; then
     IP_FILE=$2
     OUTPUT_FILE=$3
@@ -590,11 +606,6 @@ elif [ "${TASK}" == "deploy-shared-to-cluster" ]; then
     SHARED_DIR=$3
 
     deploy-shared-to-cluster "${IP_FILE}" "${SHARED_DIR}"
-elif [ "${TASK}" == "deploy-shared" ]; then
-    IP=$2
-    SHARED_DIR=$3
-
-    deploy-shared "${IP}" "${SHARED_DIR}"
 elif [ "${TASK}" == "setup" ]; then
     CLASS=$2
 
@@ -610,10 +621,10 @@ elif [ "${TASK}" == "setup" ]; then
     else
         abort "Unexpected class specified (expecting nothing or 'dev')"
     fi
-elif [ "${TASK}" == "build" ]; then
-    build
 elif [ "${TASK}" == "clone" ]; then
     clone
+elif [ "${TASK}" == "build" ]; then
+    build
 elif [ "${TASK}" == "package" ]; then
     package
 elif [ "${TASK}" == "deploy" ]; then
