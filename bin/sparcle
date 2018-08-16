@@ -206,7 +206,7 @@ function remote-set-up-scala { remote-op set-up-scala $1; }
 
 function set-up-misc {
     sudo apt-get install -y screen || abort "install screen failed"
-    sudo apt get install -y software-properties-common ||
+    sudo apt-get install -y software-properties-common ||
         abort "install common properties failed"
 }
 
