@@ -519,6 +519,8 @@ function make-shared {
     ip_file=$1
     shared_dir=$2
 
+    [ "${shared_dir}" == "" ] && abort "shared dir not specified"
+
     mkdir -p ${shared_dir}/conf || abort "can't make shared directory"
 
     make-gpu-slaves ${ip_file} ${shared_dir}/gpu-slaves.txt
@@ -546,7 +548,7 @@ function deploy-shared {
     ip=$1
     shared_dir=$2
 
-    [[ -d ${shared_dir} ]] || abort "can't find shared dir"
+    [ -d ${shared_dir} ] || abort "can't find shared dir"
 
     (stty -echo
      read passwd
