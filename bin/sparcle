@@ -95,7 +95,7 @@ function remote-op {
 ## problem and allows us to pass stdin through ssh when we want to.
 ## ----------------------------------------------------------------------------
 
-function remote-cluster-op {
+function cluster-op {
     master_callback=$1; shift
     slave_callback=$1; shift
     ip_file=$1; shift
@@ -147,7 +147,7 @@ function adopt {
 }
 
 function adopt-host { remote-op adopt $1 nvidia; }
-function adopt-cluster { remote-cluster-op adopt-host adopt-host $@; }
+function adopt-cluster { cluster-op adopt-host adopt-host $@; }
 
 ## ----------------------------------------------------------------------------
 ## Identify a host.
@@ -155,7 +155,7 @@ function adopt-cluster { remote-cluster-op adopt-host adopt-host $@; }
 
 function identify { uname -a; }
 function identify-host { remote-op identify $1; }
-function identify-cluster { remote-cluster-op identify-host identify-host $@; }
+function identify-cluster { cluster-op identify-host identify-host $@; }
 
 ## ----------------------------------------------------------------------------
 ## Add public ssh keys to new user on the specified host.
@@ -173,7 +173,7 @@ function authorize-host {
     cat ${HOME}/.ssh/id_dsa.pub ${HOME}/.ssh/id_rsa.pub | remote-op authorize $1
 }
 
-function authorize-cluster { remote-cluster-op authorize-host authorize-host $@; }
+function authorize-cluster { cluster-op authorize-host authorize-host $@; }
 
 ## ----------------------------------------------------------------------------
 ## Install java.
@@ -401,8 +401,8 @@ function stop-remote-master { remote-op stop-master $1; }
 ## Wrap the remote cluster operation.
 ## ----------------------------------------------------------------------------
 
-function start-remote-cluster { remote-cluster-op start-remote-master start-remote-slave $@; }
-function stop-remote-cluster { remote-cluster-op stop-remote-master start-remote-slave $@; }
+function start-remote-cluster { cluster-op start-remote-master start-remote-slave $@; }
+function stop-remote-cluster { cluster-op stop-remote-master start-remote-slave $@; }
 
 ## ----------------------------------------------------------------------------
 ## Create a gpu-slaves.txt file.  Note: we increment a local
@@ -428,7 +428,7 @@ function make-gpu-slaves {
 
     slave_number=0
 
-    remote-cluster-op "" make-gpu-slaves-entry "${ip_file}" > ${output_file}
+    cluster-op "" make-gpu-slaves-entry "${ip_file}" > ${output_file}
 }
 
 ## ----------------------------------------------------------------------------
@@ -468,7 +468,7 @@ function make-submitter {
 
     [ -e ${output_file} ] && abort "submitter file already exists"
 
-    remote-cluster-op make-submitter-master "" "${ip_file}" > ${output_file}
+    cluster-op make-submitter-master "" "${ip_file}" > ${output_file}
 }
 
 ## ----------------------------------------------------------------------------
@@ -512,7 +512,7 @@ function make-apps-config {
 
     [ -e ${output_file} ] && abort "apps-config file already exists"
 
-    remote-cluster-op make-apps-config-master "" "${ip_file}" > ${output_file}
+    cluster-op make-apps-config-master "" "${ip_file}" > ${output_file}
 }
 
 ## ----------------------------------------------------------------------------
@@ -567,7 +567,7 @@ function deploy-shared-to-cluster {
     ip_file=$1
     shared_dir=$2
 
-    remote-cluster-op deploy-shared deploy-shared "${ip_file}" "${shared_dir}"
+    cluster-op deploy-shared deploy-shared "${ip_file}" "${shared_dir}"
 }
 
 
