@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #DISTDIR=${HOME}/src
-DISTDIR=${HOME}/work/pointr/src
-DISTNAME=OCspark
+#DISTDIR=${HOME}/work/pointr/src
+#DISTNAME=OCspark
 LOGDIR=${HOME}/sparcle-logs
 START_SLAVE_COMMAND="/shared/runtfserver.sh localhost 61230"
 START_MASTER_COMMAND="java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml"
@@ -12,6 +12,9 @@ APP_NAME=test-local
 GPU_REGISTRY_PORT=60001
 DEBUG=1
 
+OCSPARK="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" > /dev/null && pwd)"
+DISTNAME="$(basename "${OCSPARK}")"
+DISTDIR="$(dirname "${OCSPARK}")"
 
 ## ----------------------------------------------------------------------------
 ## Implement no-op versions of dangerous commands.
@@ -242,6 +245,7 @@ function clone {
     (cd ${DISTDIR} && git clone https://github.com/OpenChaiSpark/OCspark.git) ||
         abort "git clone failed"
     (cd ${OCSPARK} && git checkout -b v3 origin/v3) || abort "git branch failed"
+    (cd ${OCSPARK} && git pull) || abort "git pull failed"
 }
 
 function remote-clone { remote-op clone $1; }
