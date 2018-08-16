@@ -402,7 +402,7 @@ function stop-remote-master { remote-op stop-master $1; }
 ## ----------------------------------------------------------------------------
 
 function start-remote-cluster { cluster-op start-remote-master start-remote-slave $@; }
-function stop-remote-cluster { cluster-op stop-remote-master start-remote-slave $@; }
+function stop-remote-cluster { cluster-op stop-remote-master stop-remote-slave $@; }
 
 ## ----------------------------------------------------------------------------
 ## Create a gpu-slaves.txt file.  Note: we increment a local
