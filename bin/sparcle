@@ -529,6 +529,10 @@ function make-shared {
         abort "copy tf.jar failed"
     cp ${OCSPARK}/bin/runtfserver.sh ${shared_dir}/ ||
         abort "copy runtfserver.sh failed"
+    cp ${OCSPARK}/newapp/newapp ${shared_dir}/ ||
+        abort "copy newapp failed"
+    cp ${OCSPARK}/newapp/dummytf.pl ${shared_dir}/ ||
+        abort "copy dummytf.pl failed"
 
     chmod +x ${shared_dir}/runtfserver.sh ||
         abort "can't chmod runtfserver.sh"
