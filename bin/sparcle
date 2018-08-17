@@ -4,8 +4,6 @@
 #DISTDIR=${HOME}/work/pointr/src
 #DISTNAME=OCspark
 LOGDIR=${HOME}/sparcle-logs
-START_SLAVE_COMMAND="/shared/runtfserver.sh localhost 61230"
-START_MASTER_COMMAND="java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml"
 BASE_SLAVE_PORT=61230
 DATA_DIR=${HOME}/tmp/ocspark
 APP_NAME=test-local
@@ -16,27 +14,9 @@ OCSPARK="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" > /dev/null && pwd)"
 DISTNAME="$(basename "${OCSPARK}")"
 DISTDIR="$(dirname "${OCSPARK}")"
 
-## ----------------------------------------------------------------------------
-## Implement no-op versions of dangerous commands.
-## ----------------------------------------------------------------------------
-
-if [ "${DEBUG}" != "0" ]; then
-    START_SLAVE_COMMAND="echo ${START_SLAVE_COMMAND}"
-    START_MASTER_COMMAND="echo ${START_MASTER_COMMAND}"
-fi
-
 ## We assume we don't have to build here because it's the same arch as
 ## the build server.  However we do install (most of) the build tools
 ## since we might need them later.  Note: this follows bin/setupXgene.sh.
-
-## Idea: one script.  called as:
-##
-##   deploy setup slave
-##   deploy setup master
-##   deploy setup dev
-##   deploy start master
-##   deploy start slave
-##   deploy start all
 
 ## Note: apt-get is idempotent so we don't have to check if a package
 ## is already installed before installing it.
@@ -109,6 +89,8 @@ function cluster-op {
         ip=$(echo $line | cut -f1 -d " ")
         class=$(echo $line | cut -f2 -d " ")
 
+        echo "Processing ${class}: ${ip}"
+
         if [ "${class}" == "slave" ]; then
             [ "${slave_callback}" != "" ] && ${slave_callback} ${ip} "$@"
         elif [ "${class}" == "master" ]; then
@@ -142,8 +124,8 @@ function cluster-op {
 ## *before* the function is declared and invoked by the remote shell).
 
 function adopt {
-    echo sudo adduser ${USER} || abort "adduser failed"
-    echo sudo usermod -aG sudo ${USER} || abort "usermod failed"
+    sudo adduser ${USER} || abort "adduser failed"
+    sudo usermod -aG sudo ${USER} || abort "usermod failed"
 }
 
 function adopt-host { remote-op adopt $1 nvidia; }
@@ -153,7 +135,11 @@ function adopt-cluster { cluster-op adopt-host adopt-host $@; }
 ## Identify a host.
 ## ----------------------------------------------------------------------------
 
-function identify { uname -a; }
+function identify {
+    uname -a;
+    df -h .
+}
+
 function identify-host { remote-op identify $1; }
 function identify-cluster { cluster-op identify-host identify-host $@; }
 
@@ -176,65 +162,69 @@ function authorize-host {
 function authorize-cluster { cluster-op authorize-host authorize-host $@; }
 
 ## ----------------------------------------------------------------------------
-## Install java.
+## Install packages for a worker (runtime only).
 ## ----------------------------------------------------------------------------
 
-function set-up-java {
+## Let's remove the apt-get update for now since it's failing.  Let's
+## also skip installing screen since we don't need it yet.  Note: the
+## oracle java installer only seems to be available for TX2s.
+
+function setup {
+    ## Set up java.
+
     sudo add-apt-repository ppa:webupd8team/java || abort "set java repo failed"
-    sudo apt-get update || abort "update failed"
+##    sudo apt-get update || abort "update failed"
     sudo apt-get install -y oracle-java8-installer || abort "install java failed"
     sudo apt-get install -y oracle-java8-set-default || abort "set default failed"
-}
 
-function set-up-remote-java { remote-op set-up-java $1; }
+    ## Set up misc other packages.
 
-## ----------------------------------------------------------------------------
-## Install scala.
-## ----------------------------------------------------------------------------
-
-function set-up-scala {
-    sudo wget www.scala-lang.org/files/archive/scala-2.11.8.deb ||
-        abort "fetch scala failed"
-    sudo dpkg -i scala-2.11.8.deb || abort "install scala failed"
-}
-
-function remote-set-up-scala { remote-op set-up-scala $1; }
-
-## ----------------------------------------------------------------------------
-## Install misc. other packages.
-## ----------------------------------------------------------------------------
-
-function set-up-misc {
-    sudo apt-get install -y screen || abort "install screen failed"
+##    sudo apt-get install -y screen || abort "install screen failed"
     sudo apt-get install -y software-properties-common ||
         abort "install common properties failed"
 }
 
-function remote-set-up-misc { remote-op set-up-misc $1; }
+function setup-host { remote-op setup $1; }
+function setup-cluster { cluster-op setup-host setup-host $@; }
 
 ## ----------------------------------------------------------------------------
-## Install maven
+## Install packages for a build server.
 ## ----------------------------------------------------------------------------
 
-function set-up-maven {
+function setup-for-building {
+    ## Set up java.
+
+    sudo add-apt-repository ppa:webupd8team/java || abort "set java repo failed"
+    sudo apt-get update || abort "update failed"
+    sudo apt-get install -y oracle-java8-installer || abort "install java failed"
+    sudo apt-get install -y oracle-java8-set-default || abort "set default failed"
+
+    ## Set up scala.
+
+    sudo wget www.scala-lang.org/files/archive/scala-2.11.8.deb ||
+        abort "fetch scala failed"
+    sudo dpkg -i scala-2.11.8.deb || abort "install scala failed"
+
+    ## Set up misc other packages.
+
+    sudo apt-get install -y screen || abort "install screen failed"
+    sudo apt get install -y software-properties-common ||
+        abort "install common properties failed"
+
+    ## Set up maven.
+
     sudo apt-add-repository universe || abort "add universe repo failed"
     sudo apt-get update || abort "update failed"
     sudo apt-get install -y maven || abort "install maven failed"
+
+    ## Set up yq.  Note: not needed any more.
+
+##    sudo add-apt-repository ppa:rmescandon/yq || abort "add yq repo failed"
+##    sudo apt update || abort "update failed"
+##    sudo apt install -y yq || abort "install yq failed"
 }
 
-function remote-set-up-maven { remote-op set-up-maven $1; }
-
-## ----------------------------------------------------------------------------
-## Install yq (a dependency of mkshared.sh).
-## ----------------------------------------------------------------------------
-
-function set-up-yq {
-    sudo add-apt-repository ppa:rmescandon/yq || abort "add yq repo failed"
-    sudo apt update || abort "update failed"
-    sudo apt install -y yq || abort "install yq failed"
-}
-
-function remote-set-up-yq { remote-op set-up-yq $1; }
+function setup-host-for-building { remote-op setup-for-building $1; }
 
 ## ----------------------------------------------------------------------------
 ## Create a clone of the sparcle repo.
@@ -289,16 +279,44 @@ function package {
 function remote-package { remote-op package $1; }
 
 ## ----------------------------------------------------------------------------
-## Deploy a sparcle package on a remote host.
+## Deploy an OCspark directory.
 ## ----------------------------------------------------------------------------
 
-function deploy {
-    export remote_host=192.168.1.109
-    ssh ${remote_host} "ls -d ${OCSPARK}" && abort "Remote sparcle already present"
-    scp ${HOME}/ocspark-${ARCH}.tgz ${remote_host}: ||
-        abort "sparcle package copy failed"
-    ssh ${remote_host} "mkdir -p ${DISTDIR} && cd ${DISTDIR} && tar -xzvf ${HOME}/ocspark-${ARCH}.tgz" ||
-        abort "sparcle package unpack failed"
+function deploy-app {
+    app_dir=$1
+
+    [ -d ${app_dir} ] || abort "can't find app dir"
+
+    parent_dir=$(dirname ${app_dir})
+    target_dir=$(basename ${app_dir})
+
+    [ -d ${HOME}/${target_dir} ] && abort "app dir already deployed"
+
+    (cd $parent_dir && tar -cz ${target_dir}) | (cd && tar -xz) ||
+        abort "deployment of app dir failed"
+}
+
+function deploy-app-to-host {
+    ip=$1
+    app_dir=$2
+
+    [ -d ${app_dir} ] || abort "can't find app dir"
+
+    parent_dir=$(dirname ${app_dir})
+    target_dir=$(basename ${app_dir})
+
+    ssh ${ip} "ls -d ${target_dir} > /dev/null 2>&1" &&
+        abort "Remote sparcle already present"
+
+    (cd ${parent_dir} && tar -cz ${target_dir}) | ssh ${ip} "tar -xz" ||
+        abort "deployment of app dir failed"
+}
+
+function deploy-app-to-cluster {
+    ip_file=$1
+    app_dir=$2
+
+    cluster-op deploy-app-to-host deploy-app-to-host "${ip_file}" "${app_dir}"
 }
 
 ## ----------------------------------------------------------------------------
@@ -312,13 +330,14 @@ function start-slave {
 }
 
 function start-remote-slave { remote-op start-slave $1; }
+function start-cluster-slaves { cluster-op "" start-remote-slave $@; }
 
 ## ----------------------------------------------------------------------------
 ## Start a slave on a remote host (typically a GPU), logging to this
 ## host.  Note: slaves must be started before the master.
 ## ----------------------------------------------------------------------------
 
-function start-remote-slave-logging-here {
+function start-remote-slave-logging-here { ## unused for now
     remote_host=$1
 
     [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
@@ -328,41 +347,13 @@ function start-remote-slave-logging-here {
 }
 
 ## ----------------------------------------------------------------------------
-## Start slaves on multiple remote hosts, supplied via a file.
-## ----------------------------------------------------------------------------
-
-function start-remote-slaves {
-    SLAVEFILE=$1
-
-    [ "${SLAVEFILE}" == "" ] && abort "No slaves file (ip addresses) supplied"
-    [ -e ${SLAVEFILE} ] || abort "Supplied slave file '${SLAVEFILE}' not found"
-
-    for slave in $(cat ${SLAVEFILE}); do
-        start-remote-slave ${slave}
-    done
-}
-
-## ----------------------------------------------------------------------------
 ## Stop a slave on a remote host (typically a GPU).
 ## ----------------------------------------------------------------------------
 
-function stop-slave { pkill -f -n "${START_SLAVE_COMMAND}"; }
+function stop-slave { pkill -f -n "/shared/runtfserver.sh localhost 61230"; }
+
 function stop-remote-slave { remote-op stop-slave $1; }
-
-## ----------------------------------------------------------------------------
-## Stop slaves on multiple remote hosts, supplied via a file.
-## ----------------------------------------------------------------------------
-
-function stop-remote-slaves {
-    SLAVEFILE=$1
-
-    [ "${SLAVEFILE}" == "" ] && abort "No slaves file (ip addresses) supplied"
-    [ -e ${SLAVEFILE} ] || abort "Supplied slave file '${SLAVEFILE}' not found"
-
-    for slave in $(cat ${SLAVEFILE}); do
-        stop-remote-slave ${slave}
-    done
-}
+function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
     
 ## ----------------------------------------------------------------------------
 ## Start a master (eg. on x-gene or i3).
@@ -375,34 +366,37 @@ function start-master {
 }
 
 function start-remote-master { remote-op start-master $1; }
+function start-cluster-masters { cluster-op start-remote-master "" $@; }
 
 ## ----------------------------------------------------------------------------
 ## Start a master on a remote host (eg. on x-gene or i3), logging to
 ## this host.  Note: slaves must be started before the master.
 ## ----------------------------------------------------------------------------
 
-function start-remote-master-logging-here {
+function start-remote-master-logging-here { ## unused for now
     remote_host=$1
 
     [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
 
     TMPFILE=$(mktemp ${LOGDIR}/sparcle-slave.XXXXXX) || exit 1
-    ssh ${remote_host} "${START_MASTER_COMMAND}" >> ${TMPFILE} 2>&1 &
+    ssh ${remote_host} "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml" >> ${TMPFILE} 2>&1 &
 }
 
 ## ----------------------------------------------------------------------------
 ## Stop a master on a remote host.
 ## ----------------------------------------------------------------------------
 
-function stop-master { pkill -f -n "${START_MASTER_COMMAND}"; }
+function stop-master { pkill -f -n "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml"; }
+
 function stop-remote-master { remote-op stop-master $1; }
+function stop-cluster-masters { cluster-op stop-remote-master "" $@; }
 
 ## ----------------------------------------------------------------------------
 ## Wrap the remote cluster operation.
 ## ----------------------------------------------------------------------------
 
-function start-remote-cluster { cluster-op start-remote-master start-remote-slave $@; }
-function stop-remote-cluster { cluster-op stop-remote-master stop-remote-slave $@; }
+function start-cluster { cluster-op start-remote-master start-remote-slave $@; }
+function stop-cluster { cluster-op stop-remote-master stop-remote-slave $@; }
 
 ## ----------------------------------------------------------------------------
 ## Create a gpu-slaves.txt file.  Note: we increment a local
@@ -543,12 +537,22 @@ function make-shared {
         abort "can't create conf/hostname"
 }
 
+function make-shared-remote { remote-op make-shared $@; } # experimental
 
 ## ----------------------------------------------------------------------------
 ## Deploy a shared directory.
 ## ----------------------------------------------------------------------------
 
 function deploy-shared {
+    shared_dir=$1
+
+    [ -d ${shared_dir} ] || abort "can't find shared dir"
+
+    tar -cz ${shared_dir} | (cd / && sudo tar -xz) ||
+        abort "deployment of shared dir failed"
+}
+
+function deploy-shared-to-host {
     ip=$1
     shared_dir=$2
 
@@ -559,137 +563,238 @@ function deploy-shared {
      stty echo
      echo $passwd
      tar -cz ${shared_dir}) |
-        ssh ${ip} "sudo -S bash -c \"cd /froggy && tar -xz\"" ||
-        abort "rsync of shared dir failed"
+        ssh ${ip} "sudo -S bash -c \"cd / && tar -xz\"" ||
+        abort "deployment of shared dir failed"
+    echo
 }
 
 function deploy-shared-to-cluster {
     ip_file=$1
     shared_dir=$2
 
-    cluster-op deploy-shared deploy-shared "${ip_file}" "${shared_dir}"
+    cluster-op deploy-shared-to-host deploy-shared-to-host "${ip_file}" "${shared_dir}"
 }
 
+## ----------------------------------------------------------------------------
+## Parse command-line arguments.
+## ----------------------------------------------------------------------------
+
+POSITIONAL=()
+IP=
+IP_FILE=
+USER_NAME=
+OUTPUT_PATH=
+DEBUG=
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--host)
+            IP="$2"
+            shift; shift
+            ;;
+
+        -c|--cluster)
+            IP_FILE="$2"
+            shift; shift
+            ;;
+
+        -u|--user)
+            USER_NAME="$2"
+            shift; shift
+            ;;
+
+        -o|--output)
+            OUTPUT_PATH="$2"
+            shift; shift
+            ;;
+
+        -d|--debug)
+            DEBUG=1
+            shift
+            ;;
+
+        *)
+            POSITIONAL+=("$1")
+            shift
+            ;;
+    esac
+done
+
+## Restore the positional args ready to parse normally.
+
+set -- "${POSITIONAL[@]}"
+
+## Ensure legal usage.
+
+if [[ ! -z ${IP} && ! -z ${IP_FILE} ]]; then
+    abort "please specify either remote host or cluster file but not both"
+fi
 
 ## ----------------------------------------------------------------------------
 ## Entry point.
 ## ----------------------------------------------------------------------------
 
-TASK=$1
+case $1 in
+    identify)
+        if [ "$IP_FILE" != "" ]; then
+            identify-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            identify-host "${IP}"
+        else
+            identify
+        fi
+        ;;
 
-if [ "${TASK}" == "identify" ]; then
-    identify
-elif [ "${TASK}" == "identify-host" ]; then
-    IP=$2
+    adopt)
+        if [ "$IP_FILE" != "" ]; then
+            adopt-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            adopt-host "${IP}"
+        else
+            adopt
+        fi
+        ;;
 
-    identify-host "${IP}"
-elif [ "${TASK}" == "identify-cluster" ]; then
-    IP_FILE=$2
+    authorize)
+        if [ "$IP_FILE" != "" ]; then
+            authorize-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            authorize-host "${IP}"
+        else
+            abort "please specify (-h) remote host or (-c) cluster file"
+        fi
+        ;;
 
-    identify-cluster "${IP_FILE}"
-elif [ "${TASK}" == "adopt" ]; then
-    adopt
-elif [ "${TASK}" == "adopt-host" ]; then
-    IP=$2
+    make-shared)
+        ## Don't check for cluster file here because we need it as an argument.
+        if [ "$IP" != "" ]; then
+            make-shared-remote "${IP}" "${IP_FILE}" "${OUTPUT_PATH}"
+        else
+            make-shared "${IP_FILE}" "${OUTPUT_PATH}"
+        fi
+        ;;
 
-    adopt-host "${IP}"
-elif [ "${TASK}" == "adopt-cluster" ]; then
-    IP_FILE=$2
+    deploy-shared)
+        if [ "$IP_FILE" != "" ]; then
+            deploy-shared-to-cluster "${IP_FILE}" "${OUTPUT_PATH}"
+        elif [ "$IP" != "" ]; then
+            deploy-shared-to-host "${IP}" "${OUTPUT_PATH}"
+        else
+            deploy-shared "${OUTPUT_PATH}"
+        fi
+        ;;
 
-    adopt-cluster "${IP_FILE}"
-elif [ "${TASK}" == "authorize-host" ]; then
-    IP=$2
+    setup)
+        if [ "$IP_FILE" != "" ]; then
+            setup-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            setup-host "${IP}"
+        else
+            setup
+        fi
+        ;;
 
-    authorize-host "${IP}"
-elif [ "${TASK}" == "authorize-cluster" ]; then
-    IP_FILE=$2
+    clone)
+        if [ "$IP_FILE" != "" ]; then
+            abort "can't do this on a remote host or cluster"
+        elif [ "$IP" != "" ]; then
+            abort "can't do this on a remote host or cluster"
+        else
+            clone
+        fi
+        ;;
 
-    authorize-cluster "${IP_FILE}"
-elif [ "${TASK}" == "gpu-slaves" ]; then
-    IP_FILE=$2
-    OUTPUT_FILE=$3
+    build)
+        if [ "$IP_FILE" != "" ]; then
+            abort "can't do this on a remote host or cluster"
+        elif [ "$IP" != "" ]; then
+            abort "can't do this on a remote host or cluster"
+        else
+            build
+        fi
+        ;;
 
-    make-gpu-slaves "${IP_FILE}" "${OUTPUT_FILE}"
-elif [ "${TASK}" == "submitter" ]; then
-    IP_FILE=$2
-    OUTPUT_FILE=$3
+    package)
+        if [ "$IP_FILE" != "" ]; then
+            abort "can't do this on a remote host or cluster"
+        elif [ "$IP" != "" ]; then
+            abort "can't do this on a remote host or cluster"
+        else
+            package
+        fi
+        ;;
 
-    make-submitter "${IP_FILE}" "${OUTPUT_FILE}"
-elif [ "${TASK}" == "apps-config" ]; then
-    IP_FILE=$2
-    OUTPUT_FILE=$3
+    deploy-app)
+        if [ "$IP_FILE" != "" ]; then
+            deploy-app-to-cluster "${IP_FILE}" "${OUTPUT_PATH}"
+        elif [ "$IP" != "" ]; then
+            deploy-app-to-host "${IP}" "${OUTPUT_PATH}"
+        else
+            deploy-app "${OUTPUT_PATH}"
+        fi
+        ;;
 
-    make-apps-config "${IP_FILE}" "${OUTPUT_FILE}"
-elif [ "${TASK}" == "shared" ]; then
-    IP_FILE=$2
-    SHARED_DIR=$3
+    start-slave)
+        if [ "$IP_FILE" != "" ]; then
+            start-cluster-slaves "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            start-remote-slave "${IP}"
+        else
+            start-slave
+        fi
+        ;;
 
-    make-shared "${IP_FILE}" "${SHARED_DIR}"
-elif [ "${TASK}" == "deploy-shared" ]; then
-    IP=$2
-    SHARED_DIR=$3
+    start-master)
+        if [ "$IP_FILE" != "" ]; then
+            start-cluster-masters "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            start-remote-master "${IP}"
+        else
+            start-master
+        fi
+        ;;
 
-    deploy-shared "${IP}" "${SHARED_DIR}"
-elif [ "${TASK}" == "deploy-shared-to-cluster" ]; then
-    IP_FILE=$2
-    SHARED_DIR=$3
+    start)
+        if [ "$IP_FILE" != "" ]; then
+            start-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            abort "can't do this on a remote host.  Please specify (-c) cluster file"
+        else
+            abort "please specify (-c) cluster file"
+        fi
+        ;;
 
-    deploy-shared-to-cluster "${IP_FILE}" "${SHARED_DIR}"
-elif [ "${TASK}" == "setup" ]; then
-    CLASS=$2
+    stop-slave)
+        if [ "$IP_FILE" != "" ]; then
+            stop-cluster-slaves "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            stop-remote-slave "${IP}"
+        else
+            stop-slave
+        fi
+        ;;
 
-    set-up-java
-    set-up-misc
-    set-up-yq
+    stop-master)
+        if [ "$IP_FILE" != "" ]; then
+            stop-cluster-masters "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            stop-remote-master "${IP}"
+        else
+            stop-master
+        fi
+        ;;
 
-    if [ "${CLASS}" == "" ]; then
-        :
-    elif [ "${CLASS}" == "dev" ]; then
-        set-up-scala
-        set-up-maven
-    else
-        abort "Unexpected class specified (expecting nothing or 'dev')"
-    fi
-elif [ "${TASK}" == "clone" ]; then
-    clone
-elif [ "${TASK}" == "build" ]; then
-    build
-elif [ "${TASK}" == "package" ]; then
-    package
-elif [ "${TASK}" == "deploy" ]; then
-    deploy
-elif [ "${TASK}" == "start" ]; then
-    CLASS=$2
+    stop)
+        if [ "$IP_FILE" != "" ]; then
+            stop-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            abort "can't do this on a remote host.  Please specify (-c) cluster file"
+        else
+            abort "please specify (-c) cluster file"
+        fi
+        ;;
 
-    if [ "${CLASS}" == "slave" ]; then
-        start-slave
-    elif [ "${CLASS}" == "multi-slave" ]; then
-        start-remote-slaves $3
-    elif [ "${CLASS}" == "master" ]; then
-        start-master
-    elif [ "${CLASS}" == "cluster" ]; then
-        start-remote-slave $3 && start-master
-    elif [ "${CLASS}" == "multi-cluster" ]; then
-        start-remote-slaves $3 && start-master
-    else
-        abort "Unexpected or no class specified (expecting 'master', 'slave', 'multi-slave', 'cluster', 'multi-cluster')."
-    fi
-elif [ "${TASK}" == "stop" ]; then
-    CLASS=$2
-
-    if [ "${CLASS}" == "slave" ]; then
-        stop-slave
-    elif [ "${CLASS}" == "multi-slave" ]; then
-        stop-remote-slaves $3
-    elif [ "${CLASS}" == "master" ]; then
-        stop-master
-    elif [ "${CLASS}" == "cluster" ]; then
-        stop-remote-slave $3 && stop-master
-    elif [ "${CLASS}" == "multi-cluster" ]; then
-        stop-remote-slaves $3 && stop-master
-    else
-        abort "Unexpected or no class specified (expecting 'master', 'slave', 'multi-slave', 'cluster', 'multi-cluster')"
-    fi
-else
-    abort "Unexpected or no task specified (expecting 'setup', 'build', 'clone', 'package', 'deploy', 'start', 'stop')"
-fi
+    *)
+        abort "Unexpected or no task specified (expecting 'identify', 'adopt', 'authorize', 'shared', 'deploy-shared', 'setup', 'clone', 'build', 'package', 'deploy-app', 'start-slave', 'start-master', 'start', 'stop-slave', 'stop-master', 'stop')"
+        ;;
+esac
