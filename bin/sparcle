@@ -481,7 +481,7 @@ connections:
 defaults:
   apps:
     ${APP_NAME}:
-      cmdline: ${OCSPARK}/newapp/newapp ${ip}
+      cmdline: /shared/newapp ${ip}
       rundir: ${DATA_DIR}/run
       tmpdir: ${DATA_DIR}/tmp
 environments:
