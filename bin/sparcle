@@ -3,9 +3,11 @@
 #DISTDIR=${HOME}/src
 #DISTDIR=${HOME}/work/pointr/src
 #DISTNAME=OCspark
-LOGDIR=${HOME}/sparcle-logs
+LOG_DIR=/sparcle-logs
+ARCHIVE_DIR=/sparcle-archive
 BASE_SLAVE_PORT=61230
-DATA_DIR=${HOME}/tmp/ocspark
+#DATA_DIR=${HOME}/tmp/ocspark
+DATA_DIR=/data
 APP_NAME=test-local
 GPU_REGISTRY_PORT=60001
 DEBUG=1
@@ -55,11 +57,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -89,7 +91,7 @@ function cluster-op {
         ip=$(echo $line | cut -f1 -d " ")
         class=$(echo $line | cut -f2 -d " ")
 
-        echo "Processing ${class}: ${ip}"
+        echo "Processing ${class}: ${ip}" 1>&2
 
         if [ "${class}" == "slave" ]; then
             [ "${slave_callback}" != "" ] && ${slave_callback} ${ip} "$@"
@@ -325,7 +327,7 @@ function deploy-app-to-cluster {
 ## ----------------------------------------------------------------------------
 
 function start-slave {
-    TMPFILE=$(mktemp ${LOGDIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
+    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
     /shared/runtfserver.sh localhost 61230 >> ${TMPFILE} 2>&1 &
 }
 
@@ -342,7 +344,7 @@ function start-remote-slave-logging-here { ## unused for now
 
     [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
 
-    TMPFILE=$(mktemp ${LOGDIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
+    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
     ssh ${remote_host} "/shared/runtfserver.sh localhost 61230" >> ${TMPFILE} 2>&1 &
 }
 
@@ -360,7 +362,7 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 ## ----------------------------------------------------------------------------
 
 function start-master {
-    TMPFILE=$(mktemp ${LOGDIR}/sparcle-master.XXXXXX) || exit 1
+    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-master.XXXXXX) || exit 1
     export GITDIR=${OCSPARK}
     java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml >> ${TMPFILE} 2>&1 &
 }
@@ -378,7 +380,7 @@ function start-remote-master-logging-here { ## unused for now
 
     [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
 
-    TMPFILE=$(mktemp ${LOGDIR}/sparcle-slave.XXXXXX) || exit 1
+    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || exit 1
     ssh ${remote_host} "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml" >> ${TMPFILE} 2>&1 &
 }
 
@@ -419,6 +421,8 @@ function make-gpu-slaves {
     output_file=$2
 
     [ -e ${output_file} ] && abort "gpu-slaves file already exists"
+
+    echo "Making gpu-slaves file" 1>&2
 
     slave_number=0
 
@@ -462,6 +466,8 @@ function make-submitter {
 
     [ -e ${output_file} ] && abort "submitter file already exists"
 
+    echo "Making submitter file" 1>&2
+
     cluster-op make-submitter-master "" "${ip_file}" > ${output_file}
 }
 
@@ -493,9 +499,9 @@ environments:
       TF_CPP_MIN_LOG_LEVEL: "2"
   osx:
     env:
-      POINTR_HOME: /home/mike/tmp
-      TENSORFLOW_HOME: /home/mike/tmp
-      DARKNET_HOME: /home/mike/tmp
+      POINTR_HOME: /tmp
+      TENSORFLOW_HOME: /tmp
+      DARKNET_HOME: /tmp
       TF_CPP_MIN_LOG_LEVEL: "2"
 EOF
 }
@@ -505,6 +511,8 @@ function make-apps-config {
     output_file=$2
 
     [ -e ${output_file} ] && abort "apps-config file already exists"
+
+    echo "Making apps-config file" 1>&2
 
     cluster-op make-apps-config-master "" "${ip_file}" > ${output_file}
 }
@@ -577,6 +585,30 @@ function deploy-shared-to-cluster {
     shared_dir=$2
 
     cluster-op deploy-shared-to-host deploy-shared-to-host "${ip_file}" "${shared_dir}"
+}
+
+## ----------------------------------------------------------------------------
+## Archive a shared directory.
+## ----------------------------------------------------------------------------
+
+function archive-shared {
+    shared_dir=$1
+
+    [ -d ${shared_dir} ] || abort "can't find shared dir"
+
+    target="${ARCHIVE_DIR}/$(mktemp -u shared.XXXXXX)" ||
+        abort "creating shared dir archive name failed"
+
+    [ -e ${target} ] && abort "archive shared dir exists"
+
+    sudo mkdir -p ${ARCHIVE_DIR} || abort "creating archive dir failed"
+    sudo mv /shared ${target} || abort "archiving of shared dir failed"
+}
+
+function archive-shared-on-host { remote-op archive-shared "$1"; }
+
+function archive-shared-on-cluster {
+    cluster-op archive-shared-on-host archive-shared-on-host "$@"
 }
 
 ## ----------------------------------------------------------------------------
@@ -685,6 +717,16 @@ case $1 in
             deploy-shared-to-host "${IP}" "${OUTPUT_PATH}"
         else
             deploy-shared "${OUTPUT_PATH}"
+        fi
+        ;;
+
+    archive-shared)
+        if [ "$IP_FILE" != "" ]; then
+            archive-shared-on-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            archive-shared-on-host "${IP}"
+        else
+            archive-shared
         fi
         ;;
 
