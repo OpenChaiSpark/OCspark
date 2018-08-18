@@ -57,11 +57,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -323,12 +323,25 @@ function deploy-app-to-cluster {
 
 ## ----------------------------------------------------------------------------
 ## Start a slave (typically on a GPU).  Note: slaves must be started
-## before the master.
+## before the master.  Note: we must call "set -m" to prevent the
+## discconnection of the tty (created by "ssh -t") from killing the
+## slave process (even thought it's nohup'd).
 ## ----------------------------------------------------------------------------
 
 function start-slave {
-    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
-    /shared/runtfserver.sh localhost 61230 >> ${TMPFILE} 2>&1 &
+    local ip=$(hostname -I) ||
+        abort "querying hostname failed"
+    local port=$(fgrep ${ip} /shared/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:) ||
+        abort "inferring port from ip address failed"
+    local log_file="${LOG_DIR}/$(mktemp -u slave.XXXXXX)" ||
+        abort "creating slave log filename failed"
+
+    sudo mkdir -p ${LOG_DIR} || abort "creating log dir failed"
+    sudo chmod a+rwx ${LOG_DIR} || abort "changing log dir permissions failed"
+    set -m
+    nohup /shared/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
+        abort "starting slave on ip ${ip} port ${port} failed" &&
+            echo "success" 1>&2 &
 }
 
 function start-remote-slave { remote-op start-slave $1; }
@@ -352,7 +365,7 @@ function start-remote-slave-logging-here { ## unused for now
 ## Stop a slave on a remote host (typically a GPU).
 ## ----------------------------------------------------------------------------
 
-function stop-slave { pkill -f -n "/shared/runtfserver.sh localhost 61230"; }
+function stop-slave { pkill -f -n "java .+ -jar /shared/tf"; }
 
 function stop-remote-slave { remote-op stop-slave $1; }
 function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
@@ -364,7 +377,7 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 function start-master {
     TMPFILE=$(mktemp ${LOG_DIR}/sparcle-master.XXXXXX) || exit 1
     export GITDIR=${OCSPARK}
-    java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml >> ${TMPFILE} 2>&1 &
+    nohup java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml >> ${TMPFILE} 2>&1 &
 }
 
 function start-remote-master { remote-op start-master $1; }
