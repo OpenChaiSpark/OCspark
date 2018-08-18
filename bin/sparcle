@@ -413,19 +413,19 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 ## ----------------------------------------------------------------------------
 
 function start-master {
-    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
-    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
+    ## Make sure there are no existing slave processes running.
 
-    [[ "${ip}" != "${registry_ip}" ]] &&
-        abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
+    pgrep -f -n "^java .+ org.openchai.tensorflow.DirectSubmitter" > /dev/null &&
+        abort "master already running"
 
-    local log_file="${LOG_DIR}/$(mktemp -u master.XXXXXX)" ||
-        abort "creating master log filename failed"
+    ## Create the log dir if necessary.
 
     if [[ ! -d "${LOG_DIR}" ]]; then
         sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
         sudo chmod a+rwx "${LOG_DIR}" || abort "setting log dir permissions failed"
     fi
+
+    ## Create the data dir if necessary.
 
     if [ ! -d "${DATA_DIR}" ]; then
         sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
@@ -434,6 +434,26 @@ function start-master {
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
 
+    ## Archive the old log file if present.
+
+    local log_ext="$(mktemp -u XXXXXX)" || abort "creating master log extension failed"
+    local log_file="${LOG_DIR}/master"
+
+    if [[ -e "${log_file}" ]]; then
+        mv "${log_file}" "${log_file}.${log_ext}" ||
+            abort "archiving old master log file ${log_file} failed"
+    fi
+
+    ## Make sure the IP address matches the config.
+    
+    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
+    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
+
+    [[ "${ip}" != "${registry_ip}" ]] &&
+        abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
+
+    ## Start the master.
+    
     set -m
 
     nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
@@ -448,7 +468,7 @@ function start-cluster-masters { cluster-op start-remote-master "" $@; }
 ## ----------------------------------------------------------------------------
 
 function stop-master {
-    pkill -f -n "^java -Xmx2048m .+ org.openchai.tensorflow.DirectSubmitter" ||
+    pkill -f -n "^java .+ org.openchai.tensorflow.DirectSubmitter" ||
         abort "killing master failed"
 }
 
