@@ -38,10 +38,11 @@ fi
 
 
 ## ----------------------------------------------------------------------------
-## Abort with an error message.
+## Reportng.
 ## ----------------------------------------------------------------------------
 
-function abort { echo "Aborting: $1." 1>&2; exit 1; }
+function status { echo "$1." 1>&2; }
+function abort { status "Aborting: $1"; exit 1; }
 
 ## ----------------------------------------------------------------------------
 ## Apply a function on another host (specified by IP).  Note: we
@@ -59,11 +60,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -107,6 +108,37 @@ function cluster-op {
             got_master="yes"
 
             [ "${master_callback}" != "" ] && ${master_callback} ${ip} "$@"
+        else
+            abort "Found unexpected host class '${class}' in supplied IP file '${ip_file}' (expecting 'slave' or 'master')"
+        fi
+    done 3< <(cat ${ip_file} | egrep -v "^#")
+}
+
+function background-cluster-op {
+    master_callback=$1; shift
+    slave_callback=$1; shift
+    ip_file=$1; shift
+
+    [ "${ip_file}" == "" ] && abort "No IP file supplied"
+    [ -e ${ip_file} ] || abort "Supplied IP file '${ip_file}' not found"
+
+    got_master="no"
+
+    while read -u 3 -r line; do
+        ip=$(echo $line | cut -f1 -d " ")
+        class=$(echo $line | cut -f2 -d " ")
+
+        echo "Processing ${class}: ${ip}" 1>&2
+
+        if [ "${class}" == "slave" ]; then
+            [ "${slave_callback}" != "" ] && ${slave_callback} ${ip} "$@" &
+        elif [ "${class}" == "master" ]; then
+            [ "got_master" == "yes" ] &&\
+                abort "Found more than one master in supplied IP file '${ip_file}'"
+
+            got_master="yes"
+
+            [ "${master_callback}" != "" ] && ${master_callback} ${ip} "$@" &
         else
             abort "Found unexpected host class '${class}' in supplied IP file '${ip_file}' (expecting 'slave' or 'master')"
         fi
@@ -396,13 +428,28 @@ function start-cluster-slaves { cluster-op "" start-remote-slave $@; }
 ## ----------------------------------------------------------------------------
 ## Stop a slave on a remote host (typically a GPU).  Note: we match
 ## java as the start of the string in order to avoid matching the
-## pkill command itself.
+## pkill command itself.  Note: we make this idempotent by ignoring an
+## error condition.
 ## ----------------------------------------------------------------------------
 
 function stop-slave {
-    pkill -f -n "^java .+ -jar ${SHARED_DIR}/tf" || abort "killing slave failed"
-    pkill -f -n "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" ||
-        abort "killing dummytf failed"
+    local slave_pattern="^java .+ -jar ${SHARED_DIR}/tf"
+
+    if (pgrep -f -n "${slave_pattern}" > /dev/null); then
+        pkill -f -n "${slave_pattern}" || abort "killing slave failed"
+        status "killed slave"
+    else
+        status "slave already stopped"
+    fi
+
+    local dummy_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
+
+    if (pgrep -f -n "${dummy_pattern}" > /dev/null); then
+        pkill -f -n "${dummy_pattern}" || abort "killing slave failed"
+        status "killed dummytf"
+    else
+        status "dummtf already stopped"
+    fi
 }
 
 function stop-remote-slave { remote-op stop-slave $1; }
@@ -453,7 +500,7 @@ function start-master {
         abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
 
     ## Start the master.
-    
+
     set -m
 
     nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
@@ -468,8 +515,15 @@ function start-cluster-masters { cluster-op start-remote-master "" $@; }
 ## ----------------------------------------------------------------------------
 
 function stop-master {
-    pkill -f -n "^java .+ org.openchai.tensorflow.DirectSubmitter" ||
-        abort "killing master failed"
+    local pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
+
+    if (pgrep -f -n "${pattern}" > /dev/null); then
+        pkill -f -n "${pattern}" || abort "killing master failed"
+        status "killed master"
+    else
+        status "master already stopped"
+    fi
+    exit
 }
 
 function stop-remote-master { remote-op stop-master $1; }
@@ -481,6 +535,40 @@ function stop-cluster-masters { cluster-op stop-remote-master "" $@; }
 
 function start-cluster { cluster-op start-remote-master start-remote-slave $@; }
 function stop-cluster { cluster-op stop-remote-master stop-remote-slave $@; }
+
+## ----------------------------------------------------------------------------
+## Tail slave log files.  Try "tail -fv" first to force a hedaer even
+## for a single file, then faillback to "tail -f" if necessary.
+## ----------------------------------------------------------------------------
+
+#(ssh cpu tail -vf /sparcle-logs/master & ssh gpu-4 tail -vf /sparcleogs/slave /sparcle-logs/dummytf)
+
+function monitor-slave {
+    tail -fv "${LOG_DIR}/slave" "${LOG_DIR}/dummytf" 2> /dev/null ||
+        tail -f "${LOG_DIR}/slave" "${LOG_DIR}/dummytf" 2> /dev/null
+}
+
+function monitor-remote-slave { remote-op monitor-slave $1; }
+function monitor-cluster-slaves { background-cluster-op "" monitor-remote-slave $@; }
+
+## ----------------------------------------------------------------------------
+## Tail master log files.  Try "tail -fv" first to force a hedaer even
+## for a single file, then faillback to "tail -f" if necessary.
+## ----------------------------------------------------------------------------
+
+function monitor-master {
+    tail -fv "${LOG_DIR}/master" 2> /dev/null ||
+        tail -f "${LOG_DIR}/master" 2> /dev/null
+}
+
+function monitor-remote-master { remote-op monitor-master $1; }
+function monitor-cluster-masters { background-cluster-op monitor-remote-master "" $@; }
+
+## ----------------------------------------------------------------------------
+## Tail all log files.
+## ----------------------------------------------------------------------------
+
+function monitor-cluster { background-cluster-op monitor-remote-master monitor-remote-slave $@; }
 
 ## ----------------------------------------------------------------------------
 ## Create a gpu-slaves.txt file.  Note: we increment a local
@@ -915,6 +1003,36 @@ case $1 in
     stop)
         if [ "$IP_FILE" != "" ]; then
             stop-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            abort "can't do this on a remote host.  Please specify (-c) cluster file"
+        else
+            abort "please specify (-c) cluster file"
+        fi
+        ;;
+
+    monitor-slave)
+        if [ "$IP_FILE" != "" ]; then
+            monitor-cluster-slaves "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            monitor-remote-slave "${IP}"
+        else
+            monitor-slave
+        fi
+        ;;
+
+    monitor-master)
+        if [ "$IP_FILE" != "" ]; then
+            monitor-cluster-masters "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            monitor-remote-master "${IP}"
+        else
+            monitor-master
+        fi
+        ;;
+
+    monitor)
+        if [ "$IP_FILE" != "" ]; then
+            monitor-cluster "${IP_FILE}"
         elif [ "$IP" != "" ]; then
             abort "can't do this on a remote host.  Please specify (-c) cluster file"
         else
