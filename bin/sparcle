@@ -3,6 +3,7 @@
 LOG_DIR=/sparcle-logs
 ARCHIVE_DIR=/sparcle-archive
 DIST_DIR=/sparcle-dist
+SHARED_DIR=/shared
 BASE_SLAVE_PORT=61230
 DATA_DIR=/data
 APP_NAME=test-local
@@ -40,7 +41,7 @@ fi
 ## Abort with an error message.
 ## ----------------------------------------------------------------------------
 
-function abort { echo "$1.  Aborting." 1>&2; exit 1; }
+function abort { echo "Aborting: $1." 1>&2; exit 1; }
 
 ## ----------------------------------------------------------------------------
 ## Apply a function on another host (specified by IP).  Note: we
@@ -58,11 +59,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -179,7 +180,8 @@ function setup {
     ## Set up java.
 
     sudo add-apt-repository ppa:webupd8team/java || abort "set java repo failed"
-##    sudo apt-get update || abort "update failed"
+    sudo dpkg --configure -a || abort "dpkg configure failed"
+    sudo apt-get update || abort "update failed"
     sudo apt-get install -y oracle-java8-installer || abort "install java failed"
     sudo apt-get install -y oracle-java8-set-default || abort "set default failed"
 
@@ -335,15 +337,19 @@ function deploy-app-to-cluster {
 
 function start-slave {
     local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
-    local port=$(fgrep ${ip} /shared/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:) ||
+    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:) ||
         abort "inferring port from ip address failed"
     local log_file="${LOG_DIR}/$(mktemp -u slave.XXXXXX)" ||
         abort "creating slave log filename failed"
 
-    sudo mkdir -p ${LOG_DIR} || abort "creating slave log dir failed"
-    sudo chmod a+rwx ${LOG_DIR} || abort "changing slave log dir permissions failed"
+    if [ ! -d "${LOG_DIR}" ]; then
+        sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
+        sudo chmod a+rwx "${LOG_DIR}" || abort "setting log dir permissions failed"
+    fi
+
     set -m
-    nohup /shared/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
+
+    nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
         abort "starting slave on ip ${ip} port ${port} failed" &
 }
 
@@ -361,14 +367,18 @@ function start-remote-slave-logging-here { ## unused for now
     [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
 
     TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
-    ssh ${remote_host} "/shared/runtfserver.sh localhost 61230" >> ${TMPFILE} 2>&1 &
+    ssh ${remote_host} "${SHARED_DIR}/runtfserver.sh localhost 61230" >> ${TMPFILE} 2>&1 &
 }
 
 ## ----------------------------------------------------------------------------
-## Stop a slave on a remote host (typically a GPU).
+## Stop a slave on a remote host (typically a GPU).  Note: we match
+## java as the start of the string in order to avoid matching the
+## pkill command itself.
 ## ----------------------------------------------------------------------------
 
-function stop-slave { pkill -f -n "java .+ -jar /shared/tf"; }
+function stop-slave {
+    pkill -f -n "^java .+ -jar ${SHARED_DIR}/tf" || abort "killing slave failed"
+}
 
 function stop-remote-slave { remote-op stop-slave $1; }
 function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
@@ -379,7 +389,7 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 
 function start-master {
     local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
-    local registry_ip=$(echo $(fgrep gpuRegistryHost /shared/conf/apps-config.yml | cut -f2 -d:))
+    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
 
     [[ "${ip}" != "${registry_ip}" ]] &&
         abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
@@ -387,10 +397,15 @@ function start-master {
     local log_file="${LOG_DIR}/$(mktemp -u master.XXXXXX)" ||
         abort "creating master log filename failed"
 
-    sudo mkdir -p ${LOG_DIR} || abort "creating master log dir failed"
-    sudo chmod a+rwx ${LOG_DIR} || abort "changing master log dir permissions failed"
+
+    if [[ ! -d "${LOG_DIR}" ]]; then
+        sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
+        sudo chmod a+rwx "${LOG_DIR}" || abort "setting log dir permissions failed"
+    fi
+
     set -m
-    nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml > ${log_file} 2>&1 ||
+
+    nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
         abort "starting master on ip ${ip} failed" &
 }
 
@@ -408,14 +423,17 @@ function start-remote-master-logging-here { ## unused for now
     [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
 
     TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || exit 1
-    ssh ${remote_host} "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml" >> ${TMPFILE} 2>&1 &
+    ssh ${remote_host} "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml" >> ${TMPFILE} 2>&1 &
 }
 
 ## ----------------------------------------------------------------------------
 ## Stop a master on a remote host.
 ## ----------------------------------------------------------------------------
 
-function stop-master { pkill -f -n "java .+ org.openchai.tensorflow.DirectSubmitter"; }
+function stop-master {
+    pkill -f -n "^java -Xmx2048m .+ org.openchai.tensorflow.DirectSubmitter" ||
+        abort "killing master failed"
+}
 
 function stop-remote-master { remote-op stop-master $1; }
 function stop-cluster-masters { cluster-op stop-remote-master "" $@; }
@@ -514,13 +532,13 @@ connections:
 defaults:
   apps:
     ${APP_NAME}:
-      cmdline: /shared/newapp ${ip}
+      cmdline: ${SHARED_DIR}/newapp ${ip}
       rundir: ${DATA_DIR}/run
       tmpdir: ${DATA_DIR}/tmp
 environments:
   linux:
     env:
-      POINTR_HOME: /shared/pointr
+      POINTR_HOME: ${SHARED_DIR}/pointr
       TENSORFLOW_HOME: /home/ubuntu/tensorflow
       DARKNET_HOME: /git/darknet
       TF_CPP_MIN_LOG_LEVEL: "2"
@@ -619,17 +637,17 @@ function deploy-shared-to-cluster {
 ## ----------------------------------------------------------------------------
 
 function archive-shared {
-    shared_dir=$1
+    local shared_dir=$1
 
     [ -d ${shared_dir} ] || abort "can't find shared dir"
 
-    target="${ARCHIVE_DIR}/$(mktemp -u shared.XXXXXX)" ||
+    local target="${ARCHIVE_DIR}/$(mktemp -u shared.XXXXXX)" ||
         abort "creating shared dir archive name failed"
 
     [ -e ${target} ] && abort "archive shared dir exists"
 
     sudo mkdir -p ${ARCHIVE_DIR} || abort "creating archive dir failed"
-    sudo mv /shared ${target} || abort "archiving of shared dir failed"
+    sudo mv ${SHARED_DIR} ${target} || abort "archiving of shared dir failed"
 }
 
 function archive-shared-on-host { remote-op archive-shared "$1"; }
