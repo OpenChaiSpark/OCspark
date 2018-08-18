@@ -1,20 +1,22 @@
 #!/bin/bash
 
-#DISTDIR=${HOME}/src
-#DISTDIR=${HOME}/work/pointr/src
-#DISTNAME=OCspark
 LOG_DIR=/sparcle-logs
 ARCHIVE_DIR=/sparcle-archive
+DIST_DIR=/sparcle-dist
 BASE_SLAVE_PORT=61230
-#DATA_DIR=${HOME}/tmp/ocspark
 DATA_DIR=/data
 APP_NAME=test-local
 GPU_REGISTRY_PORT=60001
 DEBUG=1
 
+#OCSPARKDIR=${HOME}/src
+#OCSPARKDIR=${HOME}/work/pointr/src
+#OCSPARKNAME=OCspark
+#OCSPARK=${OCSPARKDIR}/${DISTNAME}
+
 OCSPARK="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" > /dev/null && pwd)"
-DISTNAME="$(basename "${OCSPARK}")"
-DISTDIR="$(dirname "${OCSPARK}")"
+OCSPARKNAME="$(basename "${OCSPARK}")"
+OCSPARKDIR="$(dirname "${OCSPARK}")"
 
 ## We assume we don't have to build here because it's the same arch as
 ## the build server.  However we do install (most of) the build tools
@@ -33,7 +35,6 @@ if [ "${ARCH}" != "x86_64" ] && [ "${ARCH}" != "ARM" ]; then
     abort "Unexpected architecture inferred (expecting 'arch_64')"
 fi
 
-OCSPARK=${DISTDIR}/${DISTNAME}
 
 ## ----------------------------------------------------------------------------
 ## Abort with an error message.
@@ -57,11 +58,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -75,6 +76,9 @@ function remote-op {
 ## using remote-op to send data to the remote hosts (eg. public keys,
 ## tarballs), so using a different FD in the read avoids the slurping
 ## problem and allows us to pass stdin through ssh when we want to.
+## Note: we need to operate on the master last (after all the slave)
+## if if we're starting services, but for now we'll just make sure the
+## master appears at the end of the cluster definition file.
 ## ----------------------------------------------------------------------------
 
 function cluster-op {
@@ -233,8 +237,8 @@ function setup-host-for-building { remote-op setup-for-building $1; }
 ## ----------------------------------------------------------------------------
 
 function clone {
-    (cd ${HOME} && mkdir -p ${DISTDIR}) || abort "mkdir failed"
-    (cd ${DISTDIR} && git clone https://github.com/OpenChaiSpark/OCspark.git) ||
+    (cd ${HOME} && mkdir -p ${OCSPARKDIR}) || abort "mkdir failed"
+    (cd ${OCSPARKDIR} && git clone https://github.com/OpenChaiSpark/OCspark.git) ||
         abort "git clone failed"
     (cd ${OCSPARK} && git checkout -b v3 origin/v3) || abort "git branch failed"
     (cd ${OCSPARK} && git pull) || abort "git pull failed"
@@ -274,7 +278,7 @@ function remote-build { remote-op build $1; }
 ## ----------------------------------------------------------------------------
 
 function package {
-    (cd ${DISTDIR} && tar czvf ${HOME}/ocspark-${ARCH}.tgz ${DISTNAME}) ||
+    (cd ${OCSPARKDIR} && tar czvf ${HOME}/ocspark-${ARCH}.tgz ${OCSPARKNAME}) ||
         abort "create package failed"
 }
 
@@ -325,23 +329,22 @@ function deploy-app-to-cluster {
 ## Start a slave (typically on a GPU).  Note: slaves must be started
 ## before the master.  Note: we must call "set -m" to prevent the
 ## discconnection of the tty (created by "ssh -t") from killing the
-## slave process (even thought it's nohup'd).
+## slave process (even thought it's nohup'd).  Note: we wrap the IP
+## extraction in an echo to trim whitespace.
 ## ----------------------------------------------------------------------------
 
 function start-slave {
-    local ip=$(hostname -I) ||
-        abort "querying hostname failed"
+    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
     local port=$(fgrep ${ip} /shared/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:) ||
         abort "inferring port from ip address failed"
     local log_file="${LOG_DIR}/$(mktemp -u slave.XXXXXX)" ||
         abort "creating slave log filename failed"
 
-    sudo mkdir -p ${LOG_DIR} || abort "creating log dir failed"
-    sudo chmod a+rwx ${LOG_DIR} || abort "changing log dir permissions failed"
+    sudo mkdir -p ${LOG_DIR} || abort "creating slave log dir failed"
+    sudo chmod a+rwx ${LOG_DIR} || abort "changing slave log dir permissions failed"
     set -m
     nohup /shared/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
-        abort "starting slave on ip ${ip} port ${port} failed" &&
-            echo "success" 1>&2 &
+        abort "starting slave on ip ${ip} port ${port} failed" &
 }
 
 function start-remote-slave { remote-op start-slave $1; }
@@ -375,9 +378,20 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 ## ----------------------------------------------------------------------------
 
 function start-master {
-    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-master.XXXXXX) || exit 1
-    export GITDIR=${OCSPARK}
-    nohup java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml >> ${TMPFILE} 2>&1 &
+    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
+    local registry_ip=$(echo $(fgrep gpuRegistryHost /shared/conf/apps-config.yml | cut -f2 -d:))
+
+    [[ "${ip}" != "${registry_ip}" ]] &&
+        abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
+
+    local log_file="${LOG_DIR}/$(mktemp -u master.XXXXXX)" ||
+        abort "creating master log filename failed"
+
+    sudo mkdir -p ${LOG_DIR} || abort "creating master log dir failed"
+    sudo chmod a+rwx ${LOG_DIR} || abort "changing master log dir permissions failed"
+    set -m
+    nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml > ${log_file} 2>&1 ||
+        abort "starting master on ip ${ip} failed" &
 }
 
 function start-remote-master { remote-op start-master $1; }
@@ -401,7 +415,7 @@ function start-remote-master-logging-here { ## unused for now
 ## Stop a master on a remote host.
 ## ----------------------------------------------------------------------------
 
-function stop-master { pkill -f -n "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter /shared/conf/submitter.yml"; }
+function stop-master { pkill -f -n "java .+ org.openchai.tensorflow.DirectSubmitter"; }
 
 function stop-remote-master { remote-op stop-master $1; }
 function stop-cluster-masters { cluster-op stop-remote-master "" $@; }
