@@ -59,11 +59,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; ${callback}" ||
+            -t "$(declare -f abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -341,34 +341,32 @@ function start-slave {
         abort "inferring port from ip address failed"
     local log_file="${LOG_DIR}/$(mktemp -u slave.XXXXXX)" ||
         abort "creating slave log filename failed"
+    local dummy_log_file="${LOG_DIR}/$(mktemp -u dummytf.XXXXXX)" ||
+        abort "creating slave log filename failed"
 
     if [ ! -d "${LOG_DIR}" ]; then
         sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
         sudo chmod a+rwx "${LOG_DIR}" || abort "setting log dir permissions failed"
     fi
 
+    if [ ! -d "${DATA_DIR}" ]; then
+        sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+        sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+        sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+        sudo chmod a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
+    fi
+
     set -m
 
     nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
         abort "starting slave on ip ${ip} port ${port} failed" &
+
+    nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}" > ${dummy_log_file} 2>&1 ||
+        abort "starting dummytf on ip ${ip} failed" &
 }
 
 function start-remote-slave { remote-op start-slave $1; }
 function start-cluster-slaves { cluster-op "" start-remote-slave $@; }
-
-## ----------------------------------------------------------------------------
-## Start a slave on a remote host (typically a GPU), logging to this
-## host.  Note: slaves must be started before the master.
-## ----------------------------------------------------------------------------
-
-function start-remote-slave-logging-here { ## unused for now
-    remote_host=$1
-
-    [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
-
-    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || abort "mktemp failed"
-    ssh ${remote_host} "${SHARED_DIR}/runtfserver.sh localhost 61230" >> ${TMPFILE} 2>&1 &
-}
 
 ## ----------------------------------------------------------------------------
 ## Stop a slave on a remote host (typically a GPU).  Note: we match
@@ -378,6 +376,8 @@ function start-remote-slave-logging-here { ## unused for now
 
 function stop-slave {
     pkill -f -n "^java .+ -jar ${SHARED_DIR}/tf" || abort "killing slave failed"
+    pkill -f -n "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" ||
+        abort "killing dummytf failed"
 }
 
 function stop-remote-slave { remote-op stop-slave $1; }
@@ -411,20 +411,6 @@ function start-master {
 
 function start-remote-master { remote-op start-master $1; }
 function start-cluster-masters { cluster-op start-remote-master "" $@; }
-
-## ----------------------------------------------------------------------------
-## Start a master on a remote host (eg. on x-gene or i3), logging to
-## this host.  Note: slaves must be started before the master.
-## ----------------------------------------------------------------------------
-
-function start-remote-master-logging-here { ## unused for now
-    remote_host=$1
-
-    [ "${remote_host}" == "" ] && abort "No remote host (ip addresses) supplied"
-
-    TMPFILE=$(mktemp ${LOG_DIR}/sparcle-slave.XXXXXX) || exit 1
-    ssh ${remote_host} "java -Xmx2048m -Dlogger.level=2 -classpath ${GITDIR}/tf/target/classes:${GITDIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml" >> ${TMPFILE} 2>&1 &
-}
 
 ## ----------------------------------------------------------------------------
 ## Stop a master on a remote host.

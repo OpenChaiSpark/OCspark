@@ -1,47 +1,57 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 use Time::HiRes qw(gettimeofday usleep);
 
 my %config = (
-              IMAGEDIR => "./dummy/tmp",
               FSEVENTS => 0,
               DEBUG => 0
              );
 
-if ($config{FSEVENTS}) {
-  use IO::Select;
-  use Mac::FSEvents;
+## Parse out the data dir (eg "./dummy").
 
-  my $fs = Mac::FSEvents->new(path => $config{IMAGEDIR}, file_events => 1);
-  my $fh = $fs->watch;
-  my $sel = IO::Select->new($fh);
+die "Aborting: expecting image dir as argument." if (scalar @ARGV != 1);
 
-  sub react {
-    my $pid = fork();
+my $image_dir = join("/", $ARGV[0], "tmp");
 
-    return if $pid;
+print STDERR "Watching $image_dir\n";
 
-    close STDIN;
-    close STDOUT;
+## Commenting out the FSEVENTS code for now, to aovid having to install
+## the dependent modules on the TX2s.
 
-    processImage(@_);
-
-    exit;
-  }
-
-  while ($sel->can_read) {
-    my @images = grep { /\.jpe?g$/ } map { $_->path } $fs->read_events;
-
-    for my $image (@images) {
-      react($image);
-    }
-  }
-} else {
+##if ($config{FSEVENTS}) {
+##  use IO::Select;
+##  use Mac::FSEvents;
+##
+##  my $fs = Mac::FSEvents->new(path => $image_dir, file_events => 1);
+##  my $fh = $fs->watch;
+##  my $sel = IO::Select->new($fh);
+##
+##  sub react {
+##    my $pid = fork();
+##
+##    return if $pid;
+##
+##    close STDIN;
+##    close STDOUT;
+##
+##    processImage(@_);
+##
+##    exit;
+##  }
+##
+##  while ($sel->can_read) {
+##    my @images = grep { /\.jpe?g$/ } map { $_->path } $fs->read_events;
+##
+##    for my $image (@images) {
+##      react($image);
+##    }
+##  }
+##} else {
   while (1) {
-    my $input = getLatestImage($config{IMAGEDIR});
+    my $input = getLatestImage($image_dir);
 
     processImage($input) if ($input);
   }
-}
+##}
 
 
 
@@ -93,7 +103,7 @@ sub processImage {
 ##  (my $output = $input) =~ s/\/tmp\/([^\/]+)$/\/output\/$1.result/;
   my $output = join(".", $input, "result");
 
-  printf "Input: %s Output: %s\n", $input, $output;
+  printf STDERR "Input: %s Output: %s\n", $input, $output;
 
   my $t1 = microTime();
 
