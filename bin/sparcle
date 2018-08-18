@@ -337,12 +337,12 @@ function deploy-app-to-cluster {
 
 function start-slave {
     local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
-    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:) ||
+    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt |
+                     cut -f2 -d" " | cut -f2 -d:) ||
         abort "inferring port from ip address failed"
-    local log_file="${LOG_DIR}/$(mktemp -u slave.XXXXXX)" ||
-        abort "creating slave log filename failed"
-    local dummy_log_file="${LOG_DIR}/$(mktemp -u dummytf.XXXXXX)" ||
-        abort "creating slave log filename failed"
+    local log_ext="$(mktemp -u XXXXXX)" || abort "creating slave log extension failed"
+    local log_file="${LOG_DIR}/slave.${log_ext}"
+    local dummy_log_file="${LOG_DIR}/dummytf.${log_ext}"
 
     if [ ! -d "${LOG_DIR}" ]; then
         sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
