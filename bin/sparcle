@@ -353,7 +353,7 @@ function start-slave {
         sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
         sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
         sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
-        sudo chmod a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
+        sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
 
     set -m
@@ -397,10 +397,16 @@ function start-master {
     local log_file="${LOG_DIR}/$(mktemp -u master.XXXXXX)" ||
         abort "creating master log filename failed"
 
-
     if [[ ! -d "${LOG_DIR}" ]]; then
         sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
         sudo chmod a+rwx "${LOG_DIR}" || abort "setting log dir permissions failed"
+    fi
+
+    if [ ! -d "${DATA_DIR}" ]; then
+        sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+        sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+        sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+        sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
 
     set -m
