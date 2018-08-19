@@ -5,6 +5,7 @@ ARCHIVE_DIR=/sparcle-archive
 DIST_DIR=/sparcle-dist
 SHARED_DIR=/shared
 BASE_SLAVE_PORT=61230
+#DATA_DIR=/home/mike/tmp/ocspark
 DATA_DIR=/data
 APP_NAME=test-local
 GPU_REGISTRY_PORT=60001
@@ -538,6 +539,7 @@ function start-master {
 
     set -m
 
+    export GITDIR=${DIST_DIR}
     nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
         abort "starting master on ip ${ip} failed" &
     status "started master on ip ${ip}"
