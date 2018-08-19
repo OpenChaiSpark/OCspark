@@ -824,6 +824,26 @@ function archive-shared-on-cluster {
 }
 
 ## ----------------------------------------------------------------------------
+## Clean a data directory.  Note: in startStopServers.sh the rm of
+## app1/completed was recursive for some reason.
+## ----------------------------------------------------------------------------
+
+function clean {
+    if [ ! -d ${DATA_DIR} ]; then
+        status "no data dir"
+        return
+    fi
+
+    local input_dir="${DATA_DIR}/input"
+
+    rm "${input_dir}/processing/*" || true
+    rm "${input_dir}/completed/*" || true
+}
+
+function clean-host { remote-op clean "$1"; }
+function clean-cluster {  cluster-op clean-host clean-host "$@"; }
+
+## ----------------------------------------------------------------------------
 ## Parse command-line arguments.
 ## ----------------------------------------------------------------------------
 
@@ -989,6 +1009,16 @@ case $1 in
             deploy-app-to-host "${IP}" "${OUTPUT_PATH}"
         else
             deploy-app "${OUTPUT_PATH}"
+        fi
+        ;;
+
+    clean)
+        if [ "$IP_FILE" != "" ]; then
+            clean-cluster "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            clean-host "${IP}"
+        else
+            clean
         fi
         ;;
 
