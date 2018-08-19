@@ -614,15 +614,17 @@ function monitor-cluster {
 ## slave_number variable to assign ports.
 ## ----------------------------------------------------------------------------
 
-declare -i slave_number
+declare -i slave_count
+declare -i slave_port_offset
 
 function make-gpu-slaves-entry {
     ip=$1
 
-    port=$((${BASE_SLAVE_PORT} + ${slave_number}))
-    slave_number=$((${slave_number} + 10))
+    port=$((${BASE_SLAVE_PORT} + ${slave_port_offset}))
+    slave_port_offset=$((${slave_port_offset} + 10))
+    slave_count=$((${slave_count} + 1))
 
-    echo "1 ${ip}:${port} ${APP_NAME} ${DATA_DIR}/input ${DATA_DIR}/output"
+    echo "${slave_count} ${ip}:${port} ${APP_NAME} ${DATA_DIR}/input ${DATA_DIR}/output"
 }
 
 function make-gpu-slaves {
@@ -633,7 +635,8 @@ function make-gpu-slaves {
 
     echo "Making gpu-slaves file" 1>&2
 
-    slave_number=0
+    slave_count=0
+    slave_port_offset=0
 
     cluster-op "" make-gpu-slaves-entry "${ip_file}" > ${output_file}
 }
@@ -696,8 +699,8 @@ connections:
 defaults:
   apps:
     ${APP_NAME}:
-      cmdline: ${SHARED_DIR}/newapp \${1}
-      rundir: ${DATA_DIR}/run
+      cmdline: '${SHARED_DIR}/newapp \${1} '
+      rundir: \${POINTR_HOME}
       tmpdir: ${DATA_DIR}/tmp
 environments:
   linux:
@@ -750,6 +753,8 @@ function make-shared {
         abort "copy newapp failed"
     cp ${OCSPARK}/newapp/dummytf.pl ${shared_dir}/ ||
         abort "copy dummytf.pl failed"
+
+    mkdir ${shared_dir}/pointr
 
     chmod +x ${shared_dir}/runtfserver.sh ||
         abort "can't chmod runtfserver.sh"
