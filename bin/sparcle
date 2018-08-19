@@ -864,8 +864,8 @@ function clean-data {
         return
     fi
 
-    rm "${DATA_DIR}/input/processing/*" || true
-    rm "${DATA_DIR}/input/completed/*" || true
+    rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
+    rm "${DATA_DIR}"/input/completed/*.* 2> /dev/null || true
 }
 
 function clean-host-data { remote-op clean-data "$1"; }
@@ -882,11 +882,11 @@ function scrub-data {
         return
     fi
 
-    rm "${DATA_DIR}/input/*" || true
-    rm "${DATA_DIR}/input/processing/*" || true
-    rm "${DATA_DIR}/input/completed/*" || true
-    rm "${DATA_DIR}/tmp/*" || true
-    rm "${DATA_DIR}/output/*" || true
+    rm "${DATA_DIR}"/input/*.* 2> /dev/null || true
+    rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
+    rm "${DATA_DIR}"/input/completed/*.* 2> /dev/null || true
+    rm "${DATA_DIR}"/tmp/*.* 2> /dev/null || true
+    rm "${DATA_DIR}"/output/*.* 2> /dev/null || true
 }
 
 function scrub-host-data { remote-op scrub-data "$1"; }
