@@ -854,8 +854,7 @@ function archive-shared-on-cluster {
 }
 
 ## ----------------------------------------------------------------------------
-## Clean a data directory.  Note: in startStopServers.sh the rm of
-## app1/completed was recursive for some reason.
+## Clean a data directory (but not the output subdirectory).
 ## ----------------------------------------------------------------------------
 
 function clean-data {
@@ -864,16 +863,17 @@ function clean-data {
         return
     fi
 
+    rm "${DATA_DIR}"/input/*.* 2> /dev/null || true
     rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
-    rm "${DATA_DIR}"/input/completed/*.* 2> /dev/null || true
+    rm -rf "${DATA_DIR}"/input/completed/* 2> /dev/null || true
+    rm "${DATA_DIR}"/tmp/*.* 2> /dev/null || true
 }
 
 function clean-host-data { remote-op clean-data "$1"; }
-function clean-cluster-data {  cluster-op clean-host-data clean-host-data "$@"; }
+function clean-cluster-data { cluster-op clean-host-data clean-host-data "$@"; }
 
 ## ----------------------------------------------------------------------------
-## Totally clean a data directory.  Note: in startStopServers.sh the
-## rm of app1/completed was recursive for some reason.
+## Totally clean a data directory (including the output subdirectory)
 ## ----------------------------------------------------------------------------
 
 function scrub-data {
@@ -884,13 +884,13 @@ function scrub-data {
 
     rm "${DATA_DIR}"/input/*.* 2> /dev/null || true
     rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
-    rm "${DATA_DIR}"/input/completed/*.* 2> /dev/null || true
+    rm -rf "${DATA_DIR}"/input/completed/* 2> /dev/null || true
     rm "${DATA_DIR}"/tmp/*.* 2> /dev/null || true
-    rm "${DATA_DIR}"/output/*.* 2> /dev/null || true
+    rm -rf "${DATA_DIR}"/output/* 2> /dev/null || true
 }
 
 function scrub-host-data { remote-op scrub-data "$1"; }
-function scrub-cluster-data {  cluster-op scrub-host-data scrub-host-data "$@"; }
+function scrub-cluster-data { cluster-op scrub-host-data scrub-host-data "$@"; }
 
 ## ----------------------------------------------------------------------------
 ## Clean a log directory.
@@ -906,7 +906,7 @@ function clean-logs {
 }
 
 function clean-host-logs { remote-op clean-logs "$1"; }
-function clean-cluster-logs {  cluster-op clean-host-logs clean-host-logs "$@"; }
+function clean-cluster-logs { cluster-op clean-host-logs clean-host-logs "$@"; }
 
 ## ----------------------------------------------------------------------------
 ## Parse command-line arguments.
