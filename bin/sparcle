@@ -591,7 +591,9 @@ function monitor-cluster-masters { background-cluster-op monitor-remote-master "
 ## Tail all log files.
 ## ----------------------------------------------------------------------------
 
-function monitor-cluster { background-cluster-op monitor-remote-master monitor-remote-slave $@; }
+function monitor-cluster {
+    background-cluster-op monitor-remote-master monitor-remote-slave $@
+}
 
 ## ----------------------------------------------------------------------------
 ## Create a gpu-slaves.txt file.  Note: we increment a local
@@ -680,7 +682,7 @@ connections:
 defaults:
   apps:
     ${APP_NAME}:
-      cmdline: ${SHARED_DIR}/newapp ${ip}
+      cmdline: ${SHARED_DIR}/newapp \${1}
       rundir: ${DATA_DIR}/run
       tmpdir: ${DATA_DIR}/tmp
 environments:
