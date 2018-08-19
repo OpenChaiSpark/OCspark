@@ -143,6 +143,11 @@ function background-cluster-op {
             abort "Found unexpected host class '${class}' in supplied IP file '${ip_file}' (expecting 'slave' or 'master')"
         fi
     done 3< <(cat ${ip_file} | egrep -v "^#")
+
+    trap 'exit' INT TERM
+    trap 'kill 0' EXIT
+
+    wait $(jobs -pr)
 }
 
 ## ----------------------------------------------------------------------------
