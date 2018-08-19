@@ -418,8 +418,10 @@ function start-slave {
 
     nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
         abort "starting slave on ip ${ip} port ${port} failed" &
+    status "started slave on ip ${ip} port ${port}"
     nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}" > ${dummy_log_file} 2>&1 ||
         abort "starting dummytf on ip ${ip} failed" &
+    status "started dummytf on ip ${ip} port ${port}"
 }
 
 function start-remote-slave { remote-op start-slave $1; }
@@ -505,6 +507,7 @@ function start-master {
 
     nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
         abort "starting master on ip ${ip} failed" &
+    status "started master on ip ${ip}"
 }
 
 function start-remote-master { remote-op start-master $1; }
