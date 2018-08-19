@@ -606,7 +606,7 @@ function make-gpu-slaves-entry {
     ip=$1
 
     port=$((${BASE_SLAVE_PORT} + ${slave_number}))
-    slave_number=$((${slave_number} + 1))
+    slave_number=$((${slave_number} + 10))
 
     echo "1 ${ip}:${port} ${APP_NAME} ${DATA_DIR}/input ${DATA_DIR}/output"
 }
