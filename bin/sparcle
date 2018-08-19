@@ -767,9 +767,6 @@ function make-shared-remote { remote-op make-shared $@; } # experimental
 ## shared dir and handling the sudo password.
 ## ----------------------------------------------------------------------------
 
-## TODO: force the copy to ${SHARED_DIR} irrespective of the name of the
-## local copy (${shared_dir}).
-
 function deploy-shared {
     local shared_dir=$1
 
@@ -833,6 +830,8 @@ function deploy-shared-to-cluster {
 ## ----------------------------------------------------------------------------
 ## Archive a shared directory.
 ## ----------------------------------------------------------------------------
+
+## TODO: modify to take sudo password first and then pass on to all hosts.
 
 function archive-shared {
     local shared_dir=$1
@@ -937,8 +936,8 @@ while [[ $# -gt 0 ]]; do
             shift; shift
             ;;
 
-        -o|--output)
-            OUTPUT_PATH="$2"
+        -p|--path)
+            LOCAL_PATH="$2"
             shift; shift
             ;;
 
@@ -1002,19 +1001,19 @@ case $1 in
     make-shared)
         ## Don't check for cluster file here because we need it as an argument.
         if [ "$IP" != "" ]; then
-            make-shared-remote "${IP}" "${IP_FILE}" "${OUTPUT_PATH}"
+            make-shared-remote "${IP}" "${IP_FILE}" "${LOCAL_PATH}"
         else
-            make-shared "${IP_FILE}" "${OUTPUT_PATH}"
+            make-shared "${IP_FILE}" "${LOCAL_PATH}"
         fi
         ;;
 
     deploy-shared)
         if [ "$IP_FILE" != "" ]; then
-            deploy-shared-to-cluster "${IP_FILE}" "${OUTPUT_PATH}"
+            deploy-shared-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
         elif [ "$IP" != "" ]; then
-            deploy-shared-to-host "${IP}" "${OUTPUT_PATH}"
+            deploy-shared-to-host "${IP}" "${LOCAL_PATH}"
         else
-            deploy-shared "${OUTPUT_PATH}"
+            deploy-shared "${LOCAL_PATH}"
         fi
         ;;
 
@@ -1070,11 +1069,11 @@ case $1 in
 
     deploy-app)
         if [ "$IP_FILE" != "" ]; then
-            deploy-app-to-cluster "${IP_FILE}" "${OUTPUT_PATH}"
+            deploy-app-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
         elif [ "$IP" != "" ]; then
-            deploy-app-to-host "${IP}" "${OUTPUT_PATH}"
+            deploy-app-to-host "${IP}" "${LOCAL_PATH}"
         else
-            deploy-app "${OUTPUT_PATH}"
+            deploy-app "${LOCAL_PATH}"
         fi
         ;;
 
