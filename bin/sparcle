@@ -761,14 +761,17 @@ function make-shared {
 function make-shared-remote { remote-op make-shared $@; } # experimental
 
 ## ----------------------------------------------------------------------------
-## Deploy a shared directory.
+## Deploy a shared directory (and delete any existing shared directory
+## first).  Note: these functions don't propogate down the stack as
+## usual because each has to handle tarring up and piping the source
+## shared dir and handling the sudo password.
 ## ----------------------------------------------------------------------------
 
 ## TODO: force the copy to ${SHARED_DIR} irrespective of the name of the
 ## local copy (${shared_dir}).
 
 function deploy-shared {
-    shared_dir=$1
+    local shared_dir=$1
 
     [ -d ${shared_dir} ] || abort "can't find shared dir"
 
@@ -777,8 +780,8 @@ function deploy-shared {
 }
 
 function deploy-shared-to-host {
-    ip=$1
-    shared_dir=$2
+    local ip=$1
+    local shared_dir=$2
 
     [ -d ${shared_dir} ] || abort "can't find shared dir"
 
@@ -787,16 +790,33 @@ function deploy-shared-to-host {
      stty echo
      echo $passwd
      tar -cz ${shared_dir}) |
-        ssh ${ip} "sudo -S bash -c \"cd / && tar -xz\"" ||
+        ssh ${ip} "sudo -S bash -c \"cd / && rm -rf shared && tar -xz\"" ||
         abort "deployment of shared dir failed"
     echo
 }
 
-function deploy-shared-to-cluster {
-    ip_file=$1
-    shared_dir=$2
+function deploy-shared-to-cluster-host {
+    local ip=$1
+    local shared_dir=$2
+    local passwd=$3
 
-    cluster-op deploy-shared-to-host deploy-shared-to-host "${ip_file}" "${shared_dir}"
+    [ -d ${shared_dir} ] || abort "can't find shared dir"
+
+    (echo $passwd; tar -cz ${shared_dir}) |
+        ssh ${ip} "sudo -S -p '' bash -c \"cd / && rm -rf shared && tar -xz\"" ||
+        abort "deployment of shared dir failed"
+}
+
+function deploy-shared-to-cluster {
+    local ip_file=$1
+    local shared_dir=$2
+
+    echo -n "[sudo] password for ${USER}: "
+    stty -echo
+    read passwd
+    stty echo
+    echo
+    cluster-op deploy-shared-to-cluster-host deploy-shared-to-cluster-host "${ip_file}" "${shared_dir}" "${passwd}"
 }
 
 ## ----------------------------------------------------------------------------
