@@ -828,20 +828,55 @@ function archive-shared-on-cluster {
 ## app1/completed was recursive for some reason.
 ## ----------------------------------------------------------------------------
 
-function clean {
+function clean-data {
     if [ ! -d ${DATA_DIR} ]; then
         status "no data dir"
         return
     fi
 
-    local input_dir="${DATA_DIR}/input"
-
-    rm "${input_dir}/processing/*" || true
-    rm "${input_dir}/completed/*" || true
+    rm "${DATA_DIR}/input/processing/*" || true
+    rm "${DATA_DIR}/input/completed/*" || true
 }
 
-function clean-host { remote-op clean "$1"; }
-function clean-cluster {  cluster-op clean-host clean-host "$@"; }
+function clean-host-data { remote-op clean-data "$1"; }
+function clean-cluster-data {  cluster-op clean-host-data clean-host-data "$@"; }
+
+## ----------------------------------------------------------------------------
+## Totally clean a data directory.  Note: in startStopServers.sh the
+## rm of app1/completed was recursive for some reason.
+## ----------------------------------------------------------------------------
+
+function scrub-data {
+    if [ ! -d ${DATA_DIR} ]; then
+        status "no data dir"
+        return
+    fi
+
+    rm "${DATA_DIR}/input/*" || true
+    rm "${DATA_DIR}/input/processing/*" || true
+    rm "${DATA_DIR}/input/completed/*" || true
+    rm "${DATA_DIR}/tmp/*" || true
+    rm "${DATA_DIR}/output/*" || true
+}
+
+function scrub-host-data { remote-op scrub-data "$1"; }
+function scrub-cluster-data {  cluster-op scrub-host-data scrub-host-data "$@"; }
+
+## ----------------------------------------------------------------------------
+## Clean a log directory.
+## ----------------------------------------------------------------------------
+
+function clean-logs {
+    if [ ! -d ${DATA_DIR} ]; then
+        status "no log dir"
+        return
+    fi
+
+    rm "${LOG_DIR}/*" || true
+}
+
+function clean-host-logs { remote-op clean-logs "$1"; }
+function clean-cluster-logs {  cluster-op clean-host-logs clean-host-logs "$@"; }
 
 ## ----------------------------------------------------------------------------
 ## Parse command-line arguments.
@@ -1012,13 +1047,33 @@ case $1 in
         fi
         ;;
 
-    clean)
+    clean-data)
         if [ "$IP_FILE" != "" ]; then
-            clean-cluster "${IP_FILE}"
+            clean-cluster-data "${IP_FILE}"
         elif [ "$IP" != "" ]; then
-            clean-host "${IP}"
+            clean-host-data "${IP}"
         else
-            clean
+            clean-data
+        fi
+        ;;
+
+    scrub-data)
+        if [ "$IP_FILE" != "" ]; then
+            scrub-cluster-data "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            scrub-host-data "${IP}"
+        else
+            scrub-data
+        fi
+        ;;
+
+    clean-logs)
+        if [ "$IP_FILE" != "" ]; then
+            clean-cluster-logs "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            clean-host-logs "${IP}"
+        else
+            clean-logs
         fi
         ;;
 
