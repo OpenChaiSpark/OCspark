@@ -60,11 +60,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort create-dirs ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort create-dirs ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -367,14 +367,7 @@ function deploy-app-to-cluster {
 ## extraction in an echo to trim whitespace.
 ## ----------------------------------------------------------------------------
 
-function start-slave {
-    ## Make sure there are no existing slave processes running.
-
-    pgrep -f -n "^java .+ -jar ${SHARED_DIR}/tf" > /dev/null &&
-        abort "slave already running"
-    pgrep -f -n "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" > /dev/null &&
-        abort "dummytf already running"
-
+function create-dirs {
     ## Create the log dir if necessary.
 
     if [ ! -d "${LOG_DIR}" ]; then
@@ -390,38 +383,62 @@ function start-slave {
         sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
+}
 
-    ## Archive the old log files if present.
-
+function start-slave {
     local log_ext="$(mktemp -u XXXXXX)" || abort "creating slave log extension failed"
-    local log_file="${LOG_DIR}/slave"
-    local dummy_log_file="${LOG_DIR}/dummytf"
-
-    if [[ -e "${log_file}" ]]; then
-        mv "${log_file}" "${log_file}.${log_ext}" ||
-            abort "archiving old slave log file ${log_file} failed"
-    fi
-
-    if [[ -e "${dummy_log_file}" ]]; then
-        mv "${dummy_log_file}" "${dummy_log_file}.${log_ext}" ||
-            abort "archiving old dummytf log file ${dummy_log_file} failed"
-    fi
-
-    ## Start the slave and dummy tensorflow processes.
-
     local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
     local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt |
                      cut -f2 -d" " | cut -f2 -d:) ||
         abort "inferring port from ip address failed"
 
-    set -m
+    ## Make sure there are no existing slave processes running.
 
-    nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
-        abort "starting slave on ip ${ip} port ${port} failed" &
-    status "started slave on ip ${ip} port ${port}"
-    nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}" > ${dummy_log_file} 2>&1 ||
-        abort "starting dummytf on ip ${ip} failed" &
-    status "started dummytf on ip ${ip} port ${port}"
+    if (pgrep -f -n "^java .+ -jar ${SHARED_DIR}/tf" > /dev/null); then
+        status "slave already running"
+    else
+        create-dirs
+
+        ## Archive the old log file if present.
+
+        local log_file="${LOG_DIR}/slave"
+
+        if [[ -e "${log_file}" ]]; then
+            mv "${log_file}" "${log_file}.${log_ext}" ||
+                abort "archiving old slave log file ${log_file} failed"
+        fi
+
+        ## Start the slave and dummy tensorflow processes.
+
+        set -m
+
+        nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
+            abort "starting slave on ip ${ip} port ${port} failed" &
+        status "started slave on ip ${ip} port ${port}"
+    fi
+
+    if (pgrep -f -n "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" > /dev/null); then
+        status "dummytf already running"
+    else
+        create-dirs
+
+        ## Archive the old log file if present.
+
+        local dummy_log_file="${LOG_DIR}/dummytf"
+
+        if [[ -e "${dummy_log_file}" ]]; then
+            mv "${dummy_log_file}" "${dummy_log_file}.${log_ext}" ||
+                abort "archiving old dummytf log file ${dummy_log_file} failed"
+        fi
+
+        ## Start the slave and dummy tensorflow processes.
+
+        set -m
+
+        nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}" > ${dummy_log_file} 2>&1 ||
+            abort "starting dummytf on ip ${ip} failed" &
+        status "started dummytf on ip ${ip} port ${port}"
+    fi
 }
 
 function start-remote-slave { remote-op start-slave $1; }
@@ -464,7 +481,9 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 function start-master {
     ## Make sure there are no existing slave processes running.
 
-    if (pgrep -f -n "^java .+ org.openchai.tensorflow.DirectSubmitter" > /dev/null); then
+    local pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
+
+    if (pgrep -f -n "${pattern}" > /dev/null); then
         status "master already running"
         return
     fi
