@@ -785,7 +785,7 @@ function deploy-shared-to-host {
     ## For now, if SHARED_DIR is not "/shared" then abort, so as to make
     ## sure we don't accidentally rm big chunks of the root file system.
 
-    [ "${SHARED_DIR}" != "/shared" ] && abort "unexpected data dir '${SHARED_DIR}'"
+    [ "${SHARED_DIR}" != "/shared" ] && abort "unexpected shared dir '${SHARED_DIR}'"
 
     (stty -echo
      read passwd
@@ -808,7 +808,7 @@ function deploy-shared-to-cluster-host {
     ## For now, if SHARED_DIR is not "/shared" then abort, so as to make
     ## sure we don't accidentally rm big chunks of the root file system.
 
-    [ "${SHARED_DIR}" != "/shared" ] && abort "unexpected data dir '${SHARED_DIR}'"
+    [ "${SHARED_DIR}" != "/shared" ] && abort "unexpected shared dir '${SHARED_DIR}'"
 
     (echo $passwd; cd ${shared_dir} && tar -cz .) |
         ssh ${ip} "sudo -S -p '' bash -c \"rm -rf ${SHARED_DIR} && mkdir -p ${SHARED_DIR} && cd ${SHARED_DIR} && tar -xz\"" ||
