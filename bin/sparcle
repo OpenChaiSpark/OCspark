@@ -464,8 +464,10 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 function start-master {
     ## Make sure there are no existing slave processes running.
 
-    pgrep -f -n "^java .+ org.openchai.tensorflow.DirectSubmitter" > /dev/null &&
-        abort "master already running"
+    if (pgrep -f -n "^java .+ org.openchai.tensorflow.DirectSubmitter" > /dev/null); then
+        status "master already running"
+        return
+    fi
 
     ## Create the log dir if necessary.
 
@@ -526,7 +528,6 @@ function stop-master {
     else
         status "master already stopped"
     fi
-    exit
 }
 
 function stop-remote-master { remote-op stop-master $1; }
