@@ -107,6 +107,13 @@ function cluster-op {
 
             got_master="yes"
 
+            ## We sleep briefly before calling the master callback
+            ## because if we're launching services then we appear to
+            ## need to make sure that all the slaves are fully up
+            ## before the master starts.
+
+            sleep 5
+
             [ "${master_callback}" != "" ] && ${master_callback} ${ip} "$@"
         else
             abort "Found unexpected host class '${class}' in supplied IP file '${ip_file}' (expecting 'slave' or 'master')"
@@ -754,6 +761,9 @@ function make-shared-remote { remote-op make-shared $@; } # experimental
 ## ----------------------------------------------------------------------------
 ## Deploy a shared directory.
 ## ----------------------------------------------------------------------------
+
+## TODO: force the copy to ${SHARED_DIR} irrespective of the name of the
+## local copy (${shared_dir}).
 
 function deploy-shared {
     shared_dir=$1
