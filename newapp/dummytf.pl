@@ -100,8 +100,8 @@ sub getLatestImage {
 sub processImage {
   my $input = shift;
 
-##  (my $output = $input) =~ s/\/tmp\/([^\/]+)$/\/output\/$1.result/;
-  my $output = join(".", $input, "result");
+##  (my $output = $input) =~ s/\/tmp\/([^\/]+)$/\/output\/$1.json/;
+  my $output = join(".", $input, "json");
 
   printf STDERR "Input: %s Output: %s\n", $input, $output;
 
