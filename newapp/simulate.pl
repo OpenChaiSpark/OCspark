@@ -3,13 +3,21 @@
 ## Note: we're using /usr/bin/perl to make sure it's available on
 ## the ARM servers.  Try to avoid using non-built-in modules.
 
+## For now we'll include pulling the new results and outputing stats
+## based on the results to date in the logfile.  But if that starts
+## taking too long (as the number of results gets large) then we may
+## have to move that (result tracking) code to a different script.
+## Note: we're using a hash to locate the last-seen result in each new
+## list of results, to keep the time as linear a function of the total
+## number of results as possible.
+
 use Time::HiRes qw(gettimeofday usleep);
 use File::Copy;
 use strict;
 
 my %config = (
-##              TEST_IMAGE => "/shared/test.jpg",
-              TEST_IMAGE => "/Users/mike/tmp/cat.jpg",
+              TEST_IMAGE => "/shared/test.jpg",
+##              TEST_IMAGE => "/Users/mike/tmp/cat.jpg",
 #              PERIOD => 1000,   # milliseconds
               PERIOD => 5000,   # milliseconds
               DEBUG => 0
@@ -19,8 +27,9 @@ my %config = (
 
 die "Aborting: expecting data dir as argument." if (scalar @ARGV != 1);
 
-my $input_dir = join("/", $ARGV[0], "input");
-my $output_dir = join("/", $ARGV[0], "output");
+my $data_dir = $ARGV[0];
+my $input_dir = join("/", $data_dir, "input");
+my $output_dir = join("/", $data_dir, "output");
 my $period_ms = $config{PERIOD};
 my $test_image = $config{TEST_IMAGE};
 my $image_counter = 0;
@@ -101,5 +110,5 @@ sub submitImage {
 
   ## Output to logfile.
 
-  print "$image_counter $n_new_results $period_ms $start_time $finish_time $delta_time\n";
+  print STDERR "$image_counter $n_new_results $period_ms $start_time $finish_time $delta_time\n";
 }
