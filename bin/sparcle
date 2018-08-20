@@ -486,7 +486,7 @@ function stop-slave {
 
 function stop-remote-slave { remote-op stop-slave $1; }
 function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
-    
+
 ## ----------------------------------------------------------------------------
 ## Start a master (eg. on x-gene or i3).
 ## ----------------------------------------------------------------------------
@@ -574,6 +574,85 @@ function start-cluster { cluster-op start-remote-master start-remote-slave $@; }
 function stop-cluster { cluster-op stop-remote-master stop-remote-slave $@; }
 
 ## ----------------------------------------------------------------------------
+## Start a simulate process on the master.
+## ----------------------------------------------------------------------------
+
+function start-simulator {
+    ## Make sure there are no existing simulator processes running.
+
+    local pattern="^/usr/bin/perl simulate.pl"
+
+    if (pgrep -f "${pattern}" > /dev/null); then
+        status "simulator already running"
+        return
+    fi
+
+    ## Create the log dir if necessary.
+
+    if [[ ! -d "${LOG_DIR}" ]]; then
+        sudo mkdir -p "${LOG_DIR}" || abort "creating log dir failed"
+        sudo chmod a+rwx "${LOG_DIR}" || abort "setting log dir permissions failed"
+    fi
+
+    ## Create the data dir if necessary.
+
+    if [ ! -d "${DATA_DIR}" ]; then
+        sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+        sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+        sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+        sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
+    fi
+
+    ## Archive the old log file if present.
+
+    local log_ext="$(mktemp -u XXXXXX)" || abort "creating simulator log extension failed"
+    local log_file="${LOG_DIR}/simulate"
+
+    if [[ -e "${log_file}" ]]; then
+        mv "${log_file}" "${log_file}.${log_ext}" ||
+            abort "archiving old simulator log file ${log_file} failed"
+    fi
+
+    ## Make sure the IP address matches the config.
+
+    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
+    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
+
+    [[ "${ip}" != "${registry_ip}" ]] &&
+        abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
+
+    ## Start the simulator.
+
+    set -m
+
+    export GITDIR=${DIST_DIR}
+    nohup ${SHARED_DIR}/simulate.pl "${DATA_DIR}" > ${log_file} 2>&1 ||
+        abort "starting simulator on ip ${ip} failed" &
+    status "started simulator on ip ${ip}"
+}
+
+function start-remote-simulator { remote-op start-simulator $1; }
+function start-cluster-simulators { cluster-op start-remote-simulator "" $@; }
+
+## ----------------------------------------------------------------------------
+## Stop a simulate process on a remote host.
+## ----------------------------------------------------------------------------
+
+function stop-simulator {
+    local pattern="^/usr/bin/perl /shared/simulate.pl"
+
+    if (pgrep -f "${pattern}" > /dev/null); then
+        pkill -f "${pattern}" || abort "killing simulator failed"
+        status "killed simulator"
+    else
+        status "simulator already stopped"
+    fi
+}
+
+function stop-remote-simulator { remote-op stop-simulator $1; }
+function stop-cluster-simulators { cluster-op stop-remote-simulator "" $@; }
+
+## ----------------------------------------------------------------------------
 ## Tail slave log files.  Try "tail -fv" first to force a hedaer even
 ## for a single file, then faillback to "tail -f" if necessary.
 ## ----------------------------------------------------------------------------
@@ -594,8 +673,8 @@ function monitor-cluster-slaves { background-cluster-op "" monitor-remote-slave 
 ## ----------------------------------------------------------------------------
 
 function monitor-master {
-    tail -fv "${LOG_DIR}/master" 2> /dev/null ||
-        tail -f "${LOG_DIR}/master" 2> /dev/null
+    tail -fv "${LOG_DIR}/master" "${LOG_DIR}/simulator" 2> /dev/null ||
+        tail -f "${LOG_DIR}/master" "${LOG_DIR}/simulator" 2> /dev/null
 }
 
 function monitor-remote-master { remote-op monitor-master $1; }
@@ -753,6 +832,10 @@ function make-shared {
         abort "copy newapp failed"
     cp ${OCSPARK}/newapp/dummytf.pl ${shared_dir}/ ||
         abort "copy dummytf.pl failed"
+    cp ${OCSPARK}/newapp/simulate.pl ${shared_dir}/ ||
+        abort "copy simulate.pl failed"
+    cp ${OCSPARK}/newapp/test.jpg ${shared_dir}/ ||
+        abort "copy test.jpg failed"
 
     mkdir ${shared_dir}/pointr
 
@@ -1169,6 +1252,26 @@ case $1 in
             abort "can't do this on a remote host.  Please specify (-c) cluster file"
         else
             abort "please specify (-c) cluster file"
+        fi
+        ;;
+
+    start-simulator)
+        if [ "$IP_FILE" != "" ]; then
+            start-cluster-simulators "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            start-remote-simulator "${IP}"
+        else
+            start-simulator
+        fi
+        ;;
+
+    stop-simulator)
+        if [ "$IP_FILE" != "" ]; then
+            stop-cluster-simulators "${IP_FILE}"
+        elif [ "$IP" != "" ]; then
+            stop-remote-simulator "${IP}"
+        else
+            stop-simulator
         fi
         ;;
 
