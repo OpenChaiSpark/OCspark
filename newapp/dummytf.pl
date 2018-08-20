@@ -55,18 +55,18 @@ print STDERR "Watching $image_dir\n";
 
 
 
-## Return time of day in microseconds.
+## Return time of day in milliseconds.
 
-sub microTime { gettimeofday * 1000; }
+sub milliTime { gettimeofday * 1000; }
 
 ## Do something (that can't be optimized away) for exactly 28 ms.
 
 sub fixedTask {
-  my $start_ms = microTime();
+  my $start_ms = milliTime();
   my $dummy = 0;
 
-  while (microTime() - $start_ms < 28) {
-    $dummy += microTime() / 1000;
+  while (milliTime() - $start_ms < 28) {
+    $dummy += milliTime() / 1000;
   }
 }
 
@@ -105,15 +105,15 @@ sub processImage {
 
   printf STDERR "Input: %s Output: %s\n", $input, $output;
 
-  my $t1 = microTime();
+  my $t1 = milliTime();
 
   fixedTask();
   usleep 2000;
 
-  my $t2 = microTime();
+  my $t2 = milliTime();
 
   open(FH, ">", "$output");
-  print FH "$input: " . ($t2 - $t1) . "\n";
+  print FH "$input: " . ($t2 - $t1) . "\n\n";
   close(FH);
 
   unlink($input);

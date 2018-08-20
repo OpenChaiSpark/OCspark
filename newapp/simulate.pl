@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+
+## Note: we're using /usr/bin/perl to make sure it's available on
+## the ARM servers.  Try to avoid using non-built-in modules.
+
 use Time::HiRes qw(gettimeofday usleep);
 use File::Copy;
 use strict;
