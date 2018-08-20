@@ -3,6 +3,8 @@ use Time::HiRes qw(gettimeofday usleep);
 
 my %config = (
               FSEVENTS => 0,
+              BLOB => 1,
+              BLOB_BYTES => 2 * 1024 * 1024,
               DEBUG => 0
              );
 
@@ -113,7 +115,11 @@ sub processImage {
   my $t2 = milliTime();
 
   open(FH, ">", "$output");
-  print FH "$input: " . ($t2 - $t1) . "\n\n";
+
+  print FH "$input: " . ($t2 - $t1) . "\n";
+  print FH "blob: " . ('a' x $config{BLOB_BYTES}) . "\n" if ($config{BLOB});
+  print FH "\n";
+
   close(FH);
 
   unlink($input);
