@@ -163,5 +163,5 @@ sub submitImage {
   my $mean_pending_results = $total_results > 0 ? $total_pending_results / $total_results : "";
   my $mean_pending_images = $total_results > 0 ? $total_pending_images / $total_results : "";
 
-  print STDERR "n=$image_counter p=$period_ms d=$delta_time r=$n_new_results tr=$total_results tp=$proc_time tt=$total_time td=$delay_time tpr=$pending_results tpi=$pending_images mp=$mean_proc_time mt=$mean_total_time md=$mean_delay_time mpr=$mean_pending_results mpi=$mean_pending_images\n";
+  print STDERR "n=$image_counter p=$period_ms d=$delta_time r=$n_new_results tr=$total_results pt=$proc_time tt=$total_time dt=$delay_time pr=$pending_results pi=$pending_images mpt=$mean_proc_time mtt=$mean_total_time mdt=$mean_delay_time mpr=$mean_pending_results mpi=$mean_pending_images\n";
 }
