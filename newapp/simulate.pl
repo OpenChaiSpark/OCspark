@@ -18,8 +18,8 @@ use strict;
 my %config = (
               TEST_IMAGE => "/shared/test.jpg",
 #              TEST_IMAGE => "/Users/mike/tmp/cat.jpg",
-              PERIOD => 1000,   # milliseconds
-#              PERIOD => 5000,   # milliseconds
+              PERIOD => 100,   # milliseconds
+              ANALYSE => 1,
               DEBUG => 0
              );
 
@@ -112,56 +112,75 @@ sub submitImage {
   my $n_new_results = scalar(@new_results);
 
   $last_result = $results[$#results];
-  $total_results += $n_new_results;
 
-  ## Parse data from the new results.  Example:
-  ##
-  ##   /data/tmp/test3.jpg: 30.087158203125
-  ##   total time (us): 266
-  ##   delay time (us): 27
-  ##   pending results: 0
-  ##   pending images: 1
+  my $finish_time;
+  my $delta_time;
 
-  my $filename;
-  my $proc_time;
-  my $total_time;
-  my $delay_time;
-  my $pending_results;
-  my $pending_images;
+  if ($config{ANALYSE}) {
+    ## Parse data from the new results.  Example:
+    ##
+    ##   /data/tmp/test3.jpg: 30.087158203125
+    ##   total time (us): 266
+    ##   delay time (us): 27
+    ##   pending results: 0
+    ##   pending images: 1
 
-  foreach my $result (@new_results) {
-    open(FH, $result) || die "Error: $!\n";
-    my @lines = <FH>;
-    chomp $lines[0];
-    ($filename, $proc_time) = split(": ", $lines[0]);
-    $total_time = parseResultLine($lines[1]);
-    $delay_time = parseResultLine($lines[2]);
-    $pending_results = parseResultLine($lines[3]);
-    $pending_images = parseResultLine($lines[4]);
-#    print STDERR "$filename, $proc_time, $total_time, $delay_time, $pending_results, $pending_images\n";
+    my $filename;
+    my $proc_time;
+    my $total_time;
+    my $delay_time;
+    my $pending_results;
+    my $pending_images;
 
-    $total_proc_time += $proc_time;
-    $total_total_time += $total_time;
-    $total_delay_time += $delay_time;
-    $total_pending_results += $pending_results;
-    $total_pending_images += $pending_images;
-}
+    foreach my $result (@new_results) {
+      open(FH, $result) || die "Error: $!\n";
+      my @lines = <FH>;
+      chomp $lines[0];
+      ($filename, $proc_time) = split(": ", $lines[0]);
+      $total_time = parseResultLine($lines[1]);
+      $delay_time = parseResultLine($lines[2]);
+      $pending_results = parseResultLine($lines[3]);
+      $pending_images = parseResultLine($lines[4]);
+
+      ## Aggregate.
+
+      $total_results ++;
+
+      $total_proc_time += $proc_time;
+      $total_total_time += $total_time;
+      $total_delay_time += $delay_time;
+      $total_pending_results += $pending_results;
+      $total_pending_images += $pending_images;
+
+      my $mean_proc_time = $total_proc_time / $total_results;
+      my $mean_total_time = $total_total_time / $total_results;
+      my $mean_delay_time = $total_delay_time / $total_results;
+      my $mean_pending_results = $total_pending_results / $total_results;
+      my $mean_pending_images = $total_pending_images / $total_results;
+
+      ## Update the time tracking.
+
+      $finish_time = milliTime;
+      $delta_time = $finish_time - $start_time;
+
+      ## Output to logfile.
+
+      print STDERR "n=$image_counter p=$period_ms d=$delta_time tr=$total_results nr=$n_new_results pt=$proc_time tt=$total_time dt=$delay_time pr=$pending_results pi=$pending_images mpt=$mean_proc_time mtt=$mean_total_time mdt=$mean_delay_time mpr=$mean_pending_results mpi=$mean_pending_images\n";
+    }
+  } else {
+    $total_results += $n_new_results;
+
+    ## Update the time tracking.
+
+    $finish_time = milliTime;
+    $delta_time = $finish_time - $start_time;
+
+    print STDERR "n=$image_counter p=$period_ms d=$delta_time tr=$total_results nr=$n_new_results\n";
+  }
 
   ## Sleep for the rest of the period.
 
-  my $finish_time = milliTime;
-  my $delta_time = $finish_time - $start_time;
   my $remaining_time = $period_ms - $delta_time;
 
   milliSleep($remaining_time) if $remaining_time > 0;
-
-  ## Output to logfile.
-
-  my $mean_proc_time = $total_results > 0 ? $total_proc_time / $total_results : "";
-  my $mean_total_time = $total_results > 0 ? $total_total_time / $total_results : "";
-  my $mean_delay_time = $total_results > 0 ? $total_delay_time / $total_results : "";
-  my $mean_pending_results = $total_results > 0 ? $total_pending_results / $total_results : "";
-  my $mean_pending_images = $total_results > 0 ? $total_pending_images / $total_results : "";
-
-  print STDERR "n=$image_counter p=$period_ms d=$delta_time r=$n_new_results tr=$total_results pt=$proc_time tt=$total_time dt=$delay_time pr=$pending_results pi=$pending_images mpt=$mean_proc_time mtt=$mean_total_time mdt=$mean_delay_time mpr=$mean_pending_results mpi=$mean_pending_images\n";
 }
