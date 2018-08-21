@@ -99,6 +99,8 @@ sub submitImage {
 
   copy($test_image, $target) or die "Copy failed: $!";
 
+  my $create_time = milliTime;
+
   my $delta_time;
 
   if ($config{ANALYSE}) {
@@ -157,7 +159,7 @@ sub submitImage {
 
         ## Output to logfile.
 
-        print STDERR "n=$image_counter p=$period_ms d=$delta_time tr=$total_results nr=$n_new_results pt=$proc_time tt=$total_time dt=$delay_time pr=$pending_results pi=$pending_images mpt=$mean_proc_time mtt=$mean_total_time mdt=$mean_delay_time mpr=$mean_pending_results mpi=$mean_pending_images\n";
+        print STDERR "n=$image_counter p=$period_ms t=$create_time d=$delta_time tr=$total_results nr=$n_new_results pt=$proc_time tt=$total_time dt=$delay_time pr=$pending_results pi=$pending_images mpt=$mean_proc_time mtt=$mean_total_time mdt=$mean_delay_time mpr=$mean_pending_results mpi=$mean_pending_images\n";
       }
     } else {
       $total_results += $n_new_results;
@@ -167,7 +169,7 @@ sub submitImage {
       my $finish_time = milliTime;
       $delta_time = $finish_time - $start_time;
 
-      print STDERR "n=$image_counter p=$period_ms d=$delta_time tr=$total_results nr=$n_new_results\n";
+      print STDERR "n=$image_counter p=$period_ms d=$delta_time t=$create_time tr=$total_results nr=$n_new_results\n";
     }
   } else {
     ## Update the time tracking.
@@ -175,7 +177,7 @@ sub submitImage {
     my $finish_time = milliTime;
     $delta_time = $finish_time - $start_time;
 
-    print STDERR "n=$image_counter p=$period_ms d=$delta_time\n";
+    print STDERR "n=$image_counter p=$period_ms d=$delta_time t=$create_time\n";
   }
 
   ## Sleep for the rest of the period.
