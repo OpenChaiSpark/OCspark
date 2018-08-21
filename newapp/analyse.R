@@ -16,13 +16,18 @@
 ##            timestamp when result file read
 ##            timestamp when result file written (as part of concat)
 
+## Note: cpu sees to be on a different TZ (7 hours ahead) so we subtract
+## 7 hours from s and d's timestamps.
+
 d <- read.csv("output.stat.sorted", sep=" ", header=FALSE) %>%
     mutate(n = as.integer(str_extract(V4, "[0-9]+"))) %>%
-    mutate(result.create.time = as.POSIXct(strptime(paste(V1, V2), "%Y-%m-%d %H:%M:%OS"))) %>%
-    select(-c(V1, V2, V3, V4))
+    mutate(result.create.time =
+               as.POSIXct(strptime(paste(V1, V2), "%Y-%m-%d %H:%M:%OS"))) %>%
+    select(-c(V1, V2, V3, V4)) %>%
+    mutate(result.create.time = result.create.time - 7 * 60 * 60)
 
 lagged <- d %>%
-    mutate(delta = as.double((time - lag(time)) * 1000)) %>%
+    mutate(delta = as.double((result.create.time - lag(result.create.time)) * 1000)) %>%
     tail(-1)
 
 
@@ -37,7 +42,10 @@ s <- read.csv("simulate", header = FALSE, sep = " ") %>%
     mutate(n = as.integer(str_replace(n, "^n=", ""))) %>%
     mutate(sim.period = as.integer(str_replace(sim.period, "^p=", ""))) %>%
     mutate(sim.delta = as.double(str_replace(sim.delta, "^d=", ""))) %>%
-    mutate(sim.create.time = str_replace(sim.create.time, "^t=", ""))
+    mutate(sim.create.time = str_replace(sim.create.time, "^t=", "")) %>%
+    mutate(sim.create.time =
+               as.POSIXct(strptime(sim.create.time, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(sim.create.time = sim.create.time - 7 * 60 * 60)
 
 files.tmp <- list.files("output") %>%
     lapply(function(x) paste("output", x, sep = "/")) %>%
@@ -91,6 +99,12 @@ files <- files.tmp %>%
 
 data <- files %>%
     inner_join(s, by="n") %>%
-    inner_join(d, by="n")
+    inner_join(d, by="n") %>%
+    mutate(delta.full = result.create.time - sim.create.time,
+           delta.start.tf = tf.start - sim.create.time,
+           delta.finish.tf = tf.stop - sim.create.time,
+           delta.start.newapp = na.total.start - sim.create.time,
+           delta.pause.newapp = na.delay.start - sim.create.time,
+           delta.finish.newapp = na.total.stop - sim.create.time)
 
 ## TODO: adjust some of the times by timezone
