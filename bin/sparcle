@@ -235,6 +235,11 @@ function setup {
 ##    sudo apt-get install -y screen || abort "install screen failed"
     sudo apt-get install -y software-properties-common ||
         abort "install common properties failed"
+
+    ## Install tensorflow (via wheel file we must distribute).
+
+    pip install ${GIT_DIR}/wheel-files/tensorflow-1.5.0rc0-cp27-cp27mu-linux_aarch64.whl ||
+        abort "install tensorflow failed"
 }
 
 function setup-host { remote-op setup $1; }
@@ -480,7 +485,7 @@ function stop-slave {
         pkill -f "${dummy_pattern}" || abort "killing slave failed"
         status "killed dummytf"
     else
-        status "dummtf already stopped"
+        status "dummytf already stopped"
     fi
 }
 
@@ -891,6 +896,7 @@ function deploy-shared-to-cluster-host {
     local shared_dir=$2
     local passwd=$3
 
+    [ "${shared_dir}" == "" ] && abort "shared dir not specified"
     [ -d ${shared_dir} ] || abort "can't find shared dir"
 
     ## For now, if SHARED_DIR is not "/shared" then abort, so as to make
@@ -1058,6 +1064,7 @@ function do-command {
     
     case $1 in
         identify)
+            echo "Identifying hosts..."
             if [ "$IP_FILE" != "" ]; then
                 identify-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1068,6 +1075,7 @@ function do-command {
             ;;
 
         adopt)
+            echo "Adopting hosts..."
             if [ "$IP_FILE" != "" ]; then
                 adopt-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1078,6 +1086,7 @@ function do-command {
             ;;
 
         authorize)
+            echo "Authorizing hosts..."
             if [ "$IP_FILE" != "" ]; then
                 authorize-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1089,6 +1098,7 @@ function do-command {
 
         make-shared)
             ## Don't check for cluster file here because we need it as an argument.
+            echo "Making shared directory..."
             if [ "$IP" != "" ]; then
                 make-shared-remote "${IP}" "${IP_FILE}" "${LOCAL_PATH}"
             else
@@ -1097,6 +1107,7 @@ function do-command {
             ;;
 
         deploy-shared)
+            echo "Deploying shared directory..."
             if [ "$IP_FILE" != "" ]; then
                 deploy-shared-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
             elif [ "$IP" != "" ]; then
@@ -1107,6 +1118,7 @@ function do-command {
             ;;
 
         archive-shared)
+            echo "Archiving shared directory..."
             if [ "$IP_FILE" != "" ]; then
                 archive-shared-on-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1117,6 +1129,7 @@ function do-command {
             ;;
 
         setup)
+            echo "Setting up hosts..."
             if [ "$IP_FILE" != "" ]; then
                 setup-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1127,6 +1140,7 @@ function do-command {
             ;;
 
         clone)
+            echo "Cloning sparcle repository..."
             if [ "$IP_FILE" != "" ]; then
                 abort "can't do this on a remote host or cluster"
             elif [ "$IP" != "" ]; then
@@ -1137,6 +1151,7 @@ function do-command {
             ;;
 
         build)
+            echo "Building sparcle..."
             if [ "$IP_FILE" != "" ]; then
                 abort "can't do this on a remote host or cluster"
             elif [ "$IP" != "" ]; then
@@ -1147,6 +1162,7 @@ function do-command {
             ;;
 
         package)
+            echo "Packing sparcle distribution..."
             if [ "$IP_FILE" != "" ]; then
                 abort "can't do this on a remote host or cluster"
             elif [ "$IP" != "" ]; then
@@ -1157,6 +1173,7 @@ function do-command {
             ;;
 
         deploy-app)
+            echo "Deploying sparcle distribution..."
             if [ "$IP_FILE" != "" ]; then
                 deploy-app-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
             elif [ "$IP" != "" ]; then
@@ -1167,6 +1184,7 @@ function do-command {
             ;;
 
         clean-data)
+            echo "Cleaning data directory..."
             if [ "$IP_FILE" != "" ]; then
                 clean-cluster-data "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1177,6 +1195,7 @@ function do-command {
             ;;
 
         scrub-data)
+            echo "Scrubbing data directory..."
             if [ "$IP_FILE" != "" ]; then
                 scrub-cluster-data "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1187,6 +1206,7 @@ function do-command {
             ;;
 
         clean-logs)
+            echo "Cleaning log directory..."
             if [ "$IP_FILE" != "" ]; then
                 clean-cluster-logs "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1197,6 +1217,7 @@ function do-command {
             ;;
 
         start-slave)
+            echo "Starting slave(s)..."
             if [ "$IP_FILE" != "" ]; then
                 start-cluster-slaves "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1207,6 +1228,7 @@ function do-command {
             ;;
 
         start-master)
+            echo "Starting master..."
             if [ "$IP_FILE" != "" ]; then
                 start-cluster-masters "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1217,6 +1239,7 @@ function do-command {
             ;;
 
         start)
+            echo "Starting cluster..."
             if [ "$IP_FILE" != "" ]; then
                 start-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1227,6 +1250,7 @@ function do-command {
             ;;
 
         stop-slave)
+            echo "Stopping slave(s)..."
             if [ "$IP_FILE" != "" ]; then
                 stop-cluster-slaves "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1237,6 +1261,7 @@ function do-command {
             ;;
 
         stop-master)
+            echo "Stopping master..."
             if [ "$IP_FILE" != "" ]; then
                 stop-cluster-masters "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1247,6 +1272,7 @@ function do-command {
             ;;
 
         stop)
+            echo "Stopping cluster..."
             if [ "$IP_FILE" != "" ]; then
                 stop-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1257,6 +1283,7 @@ function do-command {
             ;;
 
         start-simulator)
+            echo "Starting simulator..."
             if [ "$IP_FILE" != "" ]; then
                 start-cluster-simulators "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1267,6 +1294,7 @@ function do-command {
             ;;
 
         stop-simulator)
+            echo "Stopping simulator..."
             if [ "$IP_FILE" != "" ]; then
                 stop-cluster-simulators "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1277,6 +1305,7 @@ function do-command {
             ;;
 
         monitor-slave)
+            echo "Starting slave monitor..."
             if [ "$IP_FILE" != "" ]; then
                 monitor-cluster-slaves "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1287,6 +1316,7 @@ function do-command {
             ;;
 
         monitor-master)
+            echo "Starting master monitor..."
             if [ "$IP_FILE" != "" ]; then
                 monitor-cluster-masters "${IP_FILE}"
             elif [ "$IP" != "" ]; then
@@ -1297,6 +1327,7 @@ function do-command {
             ;;
 
         monitor)
+            echo "Starting cluster monitor..."
             if [ "$IP_FILE" != "" ]; then
                 monitor-cluster "${IP_FILE}"
             elif [ "$IP" != "" ]; then
