@@ -1,9 +1,11 @@
 #!/usr/bin/perl
 use Time::HiRes qw(gettimeofday usleep);
+use POSIX qw(strftime);
 
 my %config = (
               FSEVENTS => 0,
-              BLOB => 1,
+#              BLOB => 1,
+              BLOB => 0,
               BLOB_BYTES => 2 * 1024 * 1024,
               DEBUG => 0
              );
@@ -61,6 +63,16 @@ print STDERR "Watching $image_dir\n";
 
 sub milliTime { gettimeofday * 1000; }
 
+## Return POSIX formatted timestamp.
+
+sub getTime {
+  my $t = gettimeofday;
+  my $date = strftime("%Y-%m-%d %H:%M:%S", localtime($t));
+
+  $date .= sprintf ".%03d", ($t - int($t))*1000;
+  return $date;
+}
+
 ## Do something (that can't be optimized away) for exactly 28 ms.
 
 sub fixedTask {
@@ -102,7 +114,7 @@ sub getLatestImage {
 sub processImage {
   my $input = shift;
 
-##  (my $output = $input) =~ s/\/tmp\/([^\/]+)$/\/output\/$1.json/;
+  my $start_timestamp = getTime();
   my $output = join(".", $input, "json");
 
   printf STDERR "Input: %s Output: %s\n", $input, $output;
@@ -113,11 +125,15 @@ sub processImage {
   usleep 2000;
 
   my $t2 = milliTime();
+  my $stop_timestamp = getTime();
 
   open(FH, ">", "$output");
 
-  print FH "$input: " . ($t2 - $t1) . "\n";
-  print FH "blob: " . ('a' x $config{BLOB_BYTES}) . "\n" if ($config{BLOB});
+  print FH "dummytf file: $input\n";
+  print FH "dummytf start timestamp: " . $start_timestamp . "\n";
+  print FH "dummytf stop timestamp: " . $stop_timestamp . "\n";
+  print FH "dummytf duration: " . ($t2 - $t1) . "\n";
+  print FH "dummytf blob: " . ('a' x $config{BLOB_BYTES}) . "\n" if ($config{BLOB});
   print FH "\n";
 
   close(FH);

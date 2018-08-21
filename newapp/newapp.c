@@ -21,8 +21,12 @@
 
 struct Stats
 {
-  int total_time;
-  int delay_time;
+  struct timeval total_start_timestamp;
+  struct timeval total_stop_timestamp;
+  struct timeval delay_start_timestamp;
+  struct timeval delay_stop_timestamp;
+  int total_duration;
+  int delay_duration;
   int processed_results;
   int pending_results;
   int pending_images;
@@ -221,16 +225,27 @@ char *concat(char *left, char *sep, char *right) {
   return string;
 }
 
+struct timeval getTime() {
+  struct timeval tv;
+
+  (void) gettimeofday(&tv, NULL);
+
+  return tv;
+}
+
 int deltaMS(struct timeval start, struct timeval stop) {
   return ((stop.tv_sec - start.tv_sec)*1000000L + stop.tv_usec) - start.tv_usec;
 }
 
-int timeMS(struct timeval start) {
-  struct timeval stop;
+void printTime(FILE *fp, char *prefix, struct timeval tv) {
+  char fmt[64], buf[64];
+  struct tm *tm;
 
-  gettimeofday(&stop, NULL);
-
-  return deltaMS(start, stop);
+  if((tm = localtime(&tv.tv_sec)) != NULL) {
+    strftime(fmt, sizeof fmt, "%Y-%m-%d %H:%M:%S.%%06u %z", tm);
+    snprintf(buf, sizeof buf, fmt, tv.tv_usec);
+    fprintf(stderr, "%s: %s\n", prefix, buf);
+  }
 }
 
 
@@ -239,9 +254,9 @@ int timeMS(struct timeval start) {
 int main(int argc, char **argv) {
   struct Stats stats;
   char *filename = argv[1];
-  struct timeval total_start;
+  struct timeval total_start = getTime();
 
-  gettimeofday(&total_start, NULL);
+  stats.total_start_timestamp = total_start;
 
   if (!filename) {
     perror("No filename argument");
@@ -361,9 +376,9 @@ int main(int argc, char **argv) {
   // is below the threshold.  (For now just use a dumb loop.)  Also
   // record the total time delaying.
 
-  struct timeval delay_start;
+  struct timeval delay_start = getTime();
 
-  gettimeofday(&delay_start, NULL);
+  stats.delay_start_timestamp = delay_start;
 
   int pending_images;
 
@@ -371,9 +386,13 @@ int main(int argc, char **argv) {
     usleep(SLEEP_MICROSECONDS);
 
   stats.pending_images = pending_images;
-  stats.delay_time = timeMS(delay_start);
 
-  if (DEBUG) printf("Got delay time: %d\n", stats.delay_time);
+  struct timeval delay_stop = getTime();
+
+  stats.delay_stop_timestamp = delay_stop;
+  stats.delay_duration = deltaMS(delay_start, delay_stop);
+
+  if (DEBUG) printf("Got delay time: %d\n", stats.delay_duration);
 
   // Last-minute check for surviving json files (re-read beacuse more
   // may have been added since last read).
@@ -387,15 +406,23 @@ int main(int argc, char **argv) {
 
   // Record the total time.
 
-  stats.total_time = timeMS(total_start);
+  struct timeval total_stop = getTime();
+
+  stats.total_stop_timestamp = total_stop;
+  stats.total_duration = deltaMS(total_start, total_stop);
 
   // Emit the stats.
 
-  fprintf(stderr, "total time (us): %d\n", stats.total_time);
-  fprintf(stderr, "delay time (us): %d\n", stats.delay_time);
-  fprintf(stderr, "pending results: %d\n", stats.pending_results);
-  fprintf(stderr, "pending images: %d\n", stats.pending_images);
-  fprintf(stderr, "processed results: %d\n", stats.processed_results);
+  fprintf(stderr, "newapp total duration (microseconds): %d\n", stats.total_duration);
+  fprintf(stderr, "newapp delay duration (microseconds): %d\n", stats.delay_duration);
+  fprintf(stderr, "newapp pending results: %d\n", stats.pending_results);
+  fprintf(stderr, "newapp pending images: %d\n", stats.pending_images);
+  fprintf(stderr, "newapp processed results: %d\n", stats.processed_results);
+  printTime(stderr, "newapp total start timestamp", stats.total_start_timestamp);
+  printTime(stderr, "newapp total stop timestamp", stats.total_stop_timestamp);
+  printTime(stderr, "newapp delay start timestamp", stats.delay_start_timestamp);
+  printTime(stderr, "newapp delay stop timestamp", stats.delay_stop_timestamp);
+  fprintf(stderr, "\n");
 
   // Finally emit the results and exit.
 

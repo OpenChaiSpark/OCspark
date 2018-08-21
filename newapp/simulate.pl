@@ -12,6 +12,7 @@
 ## number of results as possible.
 
 use Time::HiRes qw(gettimeofday usleep);
+use POSIX qw(strftime);
 use File::Copy;
 use strict;
 
@@ -52,6 +53,16 @@ while (1) {
 
 sub milliTime { gettimeofday * 1000 }
 sub milliSleep { usleep($_[0] * 1000) }
+
+## Return POSIX formatted timestamp.
+
+sub getTime {
+  my $t = gettimeofday;
+  my $date = strftime("%Y-%m-%d %H:%M:%S", localtime($t));
+
+  $date .= sprintf ".%03d", ($t - int($t))*1000;
+  return $date;
+}
 
 ## Returns a list of available files, sorted by last modification date.
 
@@ -99,8 +110,7 @@ sub submitImage {
 
   copy($test_image, $target) or die "Copy failed: $!";
 
-  my $create_time = milliTime;
-
+  my $create_time = getTime;
   my $delta_time;
 
   if ($config{ANALYSE}) {
@@ -118,6 +128,22 @@ sub submitImage {
       ##   delay time (us): 27
       ##   pending results: 0
       ##   pending images: 1
+
+      ## New format:
+      ##
+      ##   dummytf file: /data/tmp/test1.jpg
+      ##   dummytf start timestamp: 2018-08-21 20:19:10.617
+      ##   dummytf stop timestamp: 2018-08-21 20:19:10.648
+      ##   dummytf duration: 30.09619140625
+      ##   newapp total duration (microseconds): 280
+      ##   newapp delay duration (microseconds): 29
+      ##   newapp pending results: 0
+      ##   newapp pending images: 1
+      ##   newapp processed results: 1
+      ##   newapp total start timestamp: 2018-08-21 20:19:11.198444 +0000
+      ##   newapp total stop timestamp: 2018-08-21 20:19:11.198724 +0000
+      ##   newapp delay start timestamp: 2018-08-21 20:19:11.198678 +0000
+      ##   newapp delay stop timestamp: 2018-08-21 20:19:11.198707 +0000
 
       my $filename;
       my $proc_time;
