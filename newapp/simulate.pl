@@ -19,6 +19,7 @@ my %config = (
               TEST_IMAGE => "/shared/test.jpg",
 #              TEST_IMAGE => "/Users/mike/tmp/cat.jpg",
               PERIOD => 100,   # milliseconds
+#              PERIOD => 5000,   # milliseconds
               ANALYSE => 1,
               DEBUG => 0
              );
@@ -33,7 +34,6 @@ my $output_dir = join("/", $data_dir, "output");
 my $period_ms = $config{PERIOD};
 my $test_image = $config{TEST_IMAGE};
 my $image_counter = 0;
-my $last_result = "";
 my $total_results = 0;
 my $total_proc_time = 0;
 my $total_total_time = 0;
@@ -41,7 +41,7 @@ my $total_delay_time = 0;
 my $total_pending_results = 0;
 my $total_pending_images = 0;
 
-print STDERR "Watching $input_dir\n";
+print STDERR "Writing to $input_dir analysing $output_dir\n";
 
 while (1) {
   submitImage();
@@ -106,12 +106,8 @@ sub submitImage {
   ## Get all results that have appeared since the last period.
 
   my @results = getResults($output_dir);
-  my %results = map { $results[$_] => $_ } 0..$#results;
-  my $last_index = $last_result ne "" ? $results{$last_result} : -1;
-  my @new_results = @results[$last_index+1..$#results];
+  my @new_results = @results[$total_results..$#results];
   my $n_new_results = scalar(@new_results);
-
-  $last_result = $results[$#results];
 
   my $finish_time;
   my $delta_time;
