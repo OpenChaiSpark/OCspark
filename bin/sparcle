@@ -1051,261 +1051,273 @@ if [[ ! -z ${IP} && ! -z ${IP_FILE} ]]; then
     abort "please specify either remote host or cluster file but not both"
 fi
 
+## Parse a command.
+
+function do-command {
+    local command=$1;
+    
+    case $1 in
+        identify)
+            if [ "$IP_FILE" != "" ]; then
+                identify-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                identify-host "${IP}"
+            else
+                identify
+            fi
+            ;;
+
+        adopt)
+            if [ "$IP_FILE" != "" ]; then
+                adopt-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                adopt-host "${IP}"
+            else
+                adopt
+            fi
+            ;;
+
+        authorize)
+            if [ "$IP_FILE" != "" ]; then
+                authorize-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                authorize-host "${IP}"
+            else
+                abort "please specify (-h) remote host or (-c) cluster file"
+            fi
+            ;;
+
+        make-shared)
+            ## Don't check for cluster file here because we need it as an argument.
+            if [ "$IP" != "" ]; then
+                make-shared-remote "${IP}" "${IP_FILE}" "${LOCAL_PATH}"
+            else
+                make-shared "${IP_FILE}" "${LOCAL_PATH}"
+            fi
+            ;;
+
+        deploy-shared)
+            if [ "$IP_FILE" != "" ]; then
+                deploy-shared-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
+            elif [ "$IP" != "" ]; then
+                deploy-shared-to-host "${IP}" "${LOCAL_PATH}"
+            else
+                deploy-shared "${LOCAL_PATH}"
+            fi
+            ;;
+
+        archive-shared)
+            if [ "$IP_FILE" != "" ]; then
+                archive-shared-on-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                archive-shared-on-host "${IP}"
+            else
+                archive-shared
+            fi
+            ;;
+
+        setup)
+            if [ "$IP_FILE" != "" ]; then
+                setup-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                setup-host "${IP}"
+            else
+                setup
+            fi
+            ;;
+
+        clone)
+            if [ "$IP_FILE" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            else
+                clone
+            fi
+            ;;
+
+        build)
+            if [ "$IP_FILE" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            else
+                build
+            fi
+            ;;
+
+        package)
+            if [ "$IP_FILE" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            else
+                package
+            fi
+            ;;
+
+        deploy-app)
+            if [ "$IP_FILE" != "" ]; then
+                deploy-app-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
+            elif [ "$IP" != "" ]; then
+                deploy-app-to-host "${IP}" "${LOCAL_PATH}"
+            else
+                deploy-app "${LOCAL_PATH}"
+            fi
+            ;;
+
+        clean-data)
+            if [ "$IP_FILE" != "" ]; then
+                clean-cluster-data "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                clean-host-data "${IP}"
+            else
+                clean-data
+            fi
+            ;;
+
+        scrub-data)
+            if [ "$IP_FILE" != "" ]; then
+                scrub-cluster-data "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                scrub-host-data "${IP}"
+            else
+                scrub-data
+            fi
+            ;;
+
+        clean-logs)
+            if [ "$IP_FILE" != "" ]; then
+                clean-cluster-logs "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                clean-host-logs "${IP}"
+            else
+                clean-logs
+            fi
+            ;;
+
+        start-slave)
+            if [ "$IP_FILE" != "" ]; then
+                start-cluster-slaves "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                start-remote-slave "${IP}"
+            else
+                start-slave
+            fi
+            ;;
+
+        start-master)
+            if [ "$IP_FILE" != "" ]; then
+                start-cluster-masters "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                start-remote-master "${IP}"
+            else
+                start-master
+            fi
+            ;;
+
+        start)
+            if [ "$IP_FILE" != "" ]; then
+                start-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host.  Please specify (-c) cluster file"
+            else
+                abort "please specify (-c) cluster file"
+            fi
+            ;;
+
+        stop-slave)
+            if [ "$IP_FILE" != "" ]; then
+                stop-cluster-slaves "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                stop-remote-slave "${IP}"
+            else
+                stop-slave
+            fi
+            ;;
+
+        stop-master)
+            if [ "$IP_FILE" != "" ]; then
+                stop-cluster-masters "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                stop-remote-master "${IP}"
+            else
+                stop-master
+            fi
+            ;;
+
+        stop)
+            if [ "$IP_FILE" != "" ]; then
+                stop-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host.  Please specify (-c) cluster file"
+            else
+                abort "please specify (-c) cluster file"
+            fi
+            ;;
+
+        start-simulator)
+            if [ "$IP_FILE" != "" ]; then
+                start-cluster-simulators "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                start-remote-simulator "${IP}"
+            else
+                start-simulator
+            fi
+            ;;
+
+        stop-simulator)
+            if [ "$IP_FILE" != "" ]; then
+                stop-cluster-simulators "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                stop-remote-simulator "${IP}"
+            else
+                stop-simulator
+            fi
+            ;;
+
+        monitor-slave)
+            if [ "$IP_FILE" != "" ]; then
+                monitor-cluster-slaves "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                monitor-remote-slave "${IP}"
+            else
+                monitor-slave
+            fi
+            ;;
+
+        monitor-master)
+            if [ "$IP_FILE" != "" ]; then
+                monitor-cluster-masters "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                monitor-remote-master "${IP}"
+            else
+                monitor-master
+            fi
+            ;;
+
+        monitor)
+            if [ "$IP_FILE" != "" ]; then
+                monitor-cluster "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host.  Please specify (-c) cluster file"
+            else
+                abort "please specify (-c) cluster file"
+            fi
+            ;;
+
+        *)
+            abort "Unexpected or no task specified (expecting 'identify', 'adopt', 'authorize', 'shared', 'deploy-shared', 'setup', 'clone', 'build', 'package', 'deploy-app', 'start-slave', 'start-master', 'start', 'stop-slave', 'stop-master', 'stop')"
+            ;;
+    esac
+}
+
+
 ## ----------------------------------------------------------------------------
 ## Entry point.
 ## ----------------------------------------------------------------------------
 
-case $1 in
-    identify)
-        if [ "$IP_FILE" != "" ]; then
-            identify-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            identify-host "${IP}"
-        else
-            identify
-        fi
-        ;;
+for command in $@; do
+    do-command $command
+done
 
-    adopt)
-        if [ "$IP_FILE" != "" ]; then
-            adopt-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            adopt-host "${IP}"
-        else
-            adopt
-        fi
-        ;;
-
-    authorize)
-        if [ "$IP_FILE" != "" ]; then
-            authorize-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            authorize-host "${IP}"
-        else
-            abort "please specify (-h) remote host or (-c) cluster file"
-        fi
-        ;;
-
-    make-shared)
-        ## Don't check for cluster file here because we need it as an argument.
-        if [ "$IP" != "" ]; then
-            make-shared-remote "${IP}" "${IP_FILE}" "${LOCAL_PATH}"
-        else
-            make-shared "${IP_FILE}" "${LOCAL_PATH}"
-        fi
-        ;;
-
-    deploy-shared)
-        if [ "$IP_FILE" != "" ]; then
-            deploy-shared-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
-        elif [ "$IP" != "" ]; then
-            deploy-shared-to-host "${IP}" "${LOCAL_PATH}"
-        else
-            deploy-shared "${LOCAL_PATH}"
-        fi
-        ;;
-
-    archive-shared)
-        if [ "$IP_FILE" != "" ]; then
-            archive-shared-on-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            archive-shared-on-host "${IP}"
-        else
-            archive-shared
-        fi
-        ;;
-
-    setup)
-        if [ "$IP_FILE" != "" ]; then
-            setup-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            setup-host "${IP}"
-        else
-            setup
-        fi
-        ;;
-
-    clone)
-        if [ "$IP_FILE" != "" ]; then
-            abort "can't do this on a remote host or cluster"
-        elif [ "$IP" != "" ]; then
-            abort "can't do this on a remote host or cluster"
-        else
-            clone
-        fi
-        ;;
-
-    build)
-        if [ "$IP_FILE" != "" ]; then
-            abort "can't do this on a remote host or cluster"
-        elif [ "$IP" != "" ]; then
-            abort "can't do this on a remote host or cluster"
-        else
-            build
-        fi
-        ;;
-
-    package)
-        if [ "$IP_FILE" != "" ]; then
-            abort "can't do this on a remote host or cluster"
-        elif [ "$IP" != "" ]; then
-            abort "can't do this on a remote host or cluster"
-        else
-            package
-        fi
-        ;;
-
-    deploy-app)
-        if [ "$IP_FILE" != "" ]; then
-            deploy-app-to-cluster "${IP_FILE}" "${LOCAL_PATH}"
-        elif [ "$IP" != "" ]; then
-            deploy-app-to-host "${IP}" "${LOCAL_PATH}"
-        else
-            deploy-app "${LOCAL_PATH}"
-        fi
-        ;;
-
-    clean-data)
-        if [ "$IP_FILE" != "" ]; then
-            clean-cluster-data "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            clean-host-data "${IP}"
-        else
-            clean-data
-        fi
-        ;;
-
-    scrub-data)
-        if [ "$IP_FILE" != "" ]; then
-            scrub-cluster-data "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            scrub-host-data "${IP}"
-        else
-            scrub-data
-        fi
-        ;;
-
-    clean-logs)
-        if [ "$IP_FILE" != "" ]; then
-            clean-cluster-logs "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            clean-host-logs "${IP}"
-        else
-            clean-logs
-        fi
-        ;;
-
-    start-slave)
-        if [ "$IP_FILE" != "" ]; then
-            start-cluster-slaves "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            start-remote-slave "${IP}"
-        else
-            start-slave
-        fi
-        ;;
-
-    start-master)
-        if [ "$IP_FILE" != "" ]; then
-            start-cluster-masters "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            start-remote-master "${IP}"
-        else
-            start-master
-        fi
-        ;;
-
-    start)
-        if [ "$IP_FILE" != "" ]; then
-            start-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            abort "can't do this on a remote host.  Please specify (-c) cluster file"
-        else
-            abort "please specify (-c) cluster file"
-        fi
-        ;;
-
-    stop-slave)
-        if [ "$IP_FILE" != "" ]; then
-            stop-cluster-slaves "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            stop-remote-slave "${IP}"
-        else
-            stop-slave
-        fi
-        ;;
-
-    stop-master)
-        if [ "$IP_FILE" != "" ]; then
-            stop-cluster-masters "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            stop-remote-master "${IP}"
-        else
-            stop-master
-        fi
-        ;;
-
-    stop)
-        if [ "$IP_FILE" != "" ]; then
-            stop-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            abort "can't do this on a remote host.  Please specify (-c) cluster file"
-        else
-            abort "please specify (-c) cluster file"
-        fi
-        ;;
-
-    start-simulator)
-        if [ "$IP_FILE" != "" ]; then
-            start-cluster-simulators "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            start-remote-simulator "${IP}"
-        else
-            start-simulator
-        fi
-        ;;
-
-    stop-simulator)
-        if [ "$IP_FILE" != "" ]; then
-            stop-cluster-simulators "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            stop-remote-simulator "${IP}"
-        else
-            stop-simulator
-        fi
-        ;;
-
-    monitor-slave)
-        if [ "$IP_FILE" != "" ]; then
-            monitor-cluster-slaves "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            monitor-remote-slave "${IP}"
-        else
-            monitor-slave
-        fi
-        ;;
-
-    monitor-master)
-        if [ "$IP_FILE" != "" ]; then
-            monitor-cluster-masters "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            monitor-remote-master "${IP}"
-        else
-            monitor-master
-        fi
-        ;;
-
-    monitor)
-        if [ "$IP_FILE" != "" ]; then
-            monitor-cluster "${IP_FILE}"
-        elif [ "$IP" != "" ]; then
-            abort "can't do this on a remote host.  Please specify (-c) cluster file"
-        else
-            abort "please specify (-c) cluster file"
-        fi
-        ;;
-
-    *)
-        abort "Unexpected or no task specified (expecting 'identify', 'adopt', 'authorize', 'shared', 'deploy-shared', 'setup', 'clone', 'build', 'package', 'deploy-app', 'start-slave', 'start-master', 'start', 'stop-slave', 'stop-master', 'stop')"
-        ;;
-esac
