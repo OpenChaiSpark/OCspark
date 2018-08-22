@@ -4,6 +4,8 @@ use POSIX qw(strftime);
 
 my %config = (
               FSEVENTS => 0,
+#              DURATION => 28,  # milliseconds
+              DURATION => 5000,  # milliseconds
 #              BLOB => 1,
               BLOB => 0,
               BLOB_BYTES => 2 * 1024 * 1024,
@@ -50,11 +52,9 @@ print STDERR "Watching $image_dir\n";
 ##    }
 ##  }
 ##} else {
-  while (1) {
-    my $input = getLatestImage($image_dir);
-
-    processImage($input) if ($input);
-  }
+while (1) {
+  processImage($image_dir);
+}
 ##}
 
 
@@ -70,6 +70,7 @@ sub getTime {
   my $date = strftime("%Y-%m-%d %H:%M:%S", localtime($t));
 
   $date .= sprintf ".%03d", ($t - int($t))*1000;
+
   return $date;
 }
 
@@ -79,7 +80,7 @@ sub fixedTask {
   my $start_ms = milliTime();
   my $dummy = 0;
 
-  while (milliTime() - $start_ms < 28) {
+  while (milliTime() - $start_ms < $config{DURATION}) {
     $dummy += milliTime() / 1000;
   }
 }
@@ -100,43 +101,47 @@ sub getFiles {
 }
 
 sub filterImages { grep { /\.jpe?g$/ } @_; }
-sub filterJsons { grep { /\.json$/ } @_; }
 
 sub getImages { filterImages(getFiles(@_)); }
-sub getJsons { filterJsons(getFiles(@_)); }
-
-sub getLatestImage {
-  my @images = getImages(@_);
-
-  pop @images;
-}
 
 sub processImage {
-  my $input = shift;
+  my $image_dir = shift;
 
+  my @images = getImages($image_dir);
+
+  return unless (@images);
+
+  my $input = shift @images;
+  my $pending_images = scalar(@images);
   my $start_timestamp = getTime();
   my $output = join(".", $input, "json");
-
-  printf STDERR "Input: %s Output: %s\n", $input, $output;
-
   my $t1 = milliTime();
 
   fixedTask();
-  usleep 2000;
 
   my $t2 = milliTime();
+
+  usleep 2000;
+
+  my $t3 = milliTime();
   my $stop_timestamp = getTime();
+  my $task_duration = $t2 - $t1;
+  my $total_duration = $t3 - $t1;
 
   open(FH, ">", "$output");
 
-  print FH "dummytf file: $input\n";
+  print FH "dummytf input: $input\n";
+  print FH "dummytf output: $output\n";
   print FH "dummytf start timestamp: " . $start_timestamp . "\n";
   print FH "dummytf stop timestamp: " . $stop_timestamp . "\n";
-  print FH "dummytf duration: " . ($t2 - $t1) . "\n";
+  print FH "dummytf task duration: " . $task_duration . "\n";
+  print FH "dummytf total duration: " . $total_duration . "\n";
   print FH "dummytf blob: " . ('a' x $config{BLOB_BYTES}) . "\n" if ($config{BLOB});
   print FH "\n";
 
   close(FH);
 
   unlink($input);
+
+  printf STDERR "input=$input output=$output start=$start_timestamp stop=$stop_timestamp task_duration=$task_duration total_duration=$total_duration pending_images=$pending_images\n";
 }
