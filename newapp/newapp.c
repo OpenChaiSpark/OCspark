@@ -130,7 +130,7 @@ void filterJsons(char **files, int nfiles, char ***jsons, int *njsons) {
   *njsons = n;
 }
 
-void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
+void filterImages(char **files, int nfiles, char ***images, int *nimages) {
   char **found = (char**) malloc(MEMORY_INCREMENT_BYTES * sizeof(char*));
   int n = 0;
 
@@ -138,7 +138,7 @@ void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
     char *file = files[i];
     int len = strlen(file);
 
-    if (len > 2 && !(len >= 5 && !strcmp(&file[len-5], ".json"))) {
+    if (len > 2 && !(len >= 5 && !strcmp(&file[len-5], ".jpg"))) {
       if (n > 0 && n % MEMORY_INCREMENT_BYTES == 0)
         found = (char**) realloc(found, (n + MEMORY_INCREMENT_BYTES) * sizeof(char*));
 
@@ -146,8 +146,8 @@ void filterImages(char **files, int nfiles, char ***jsons, int *njsons) {
     }
   }
 
-  *jsons = found;
-  *njsons = n;
+  *images = found;
+  *nimages = n;
 }
 
 void getJsons(char *dir, char ***jsons, int *njsons) {
