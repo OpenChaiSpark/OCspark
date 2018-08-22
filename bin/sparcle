@@ -943,6 +943,60 @@ function deploy-shared-to-cluster {
 }
 
 ## ----------------------------------------------------------------------------
+## Fetch data for analysis.
+## ----------------------------------------------------------------------------
+
+function fetch-data {
+    local analysis_dir=$1
+
+    [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
+    [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
+
+    local stat_file="$(mktemp -u /tmp/output.XXXXXX)" ||
+        abort "creating temporary output stat file failed"
+
+    (cd ${DATA_DIR}/output && stat -c '%y %n' *.jpg.result > ${stat_file}) ||
+        abort "gathering output stats failed"
+
+    cp ${stat_file} ${analysis_dir}/output.stat || abort "copying output stats failed"
+
+    (cd ${DATA_DIR} && tar -cz output/*.result) | (cd ${analysis_dir} && tar -xz) ||
+        abort "copying output results failed"
+
+    cp ${LOG_DIR}/simulate ${analysis_dir}/ || abort "copying simulator log failed"
+}
+
+function fetch-data-from-master {
+    local ip=$1
+    local analysis_dir=$2
+
+    [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
+    [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
+
+    local stat_file="$(mktemp -u /tmp/output.XXXXXX)" ||
+        abort "creating temporary output stat file failed"
+
+    ssh ${ip} "cd ${DATA_DIR}/output && stat -c '%y %n' *.jpg.result > ${stat_file}" ||
+        abort "gathering output stats failed"
+
+    scp ${ip}:${stat_file} ${analysis_dir}/output.stat ||
+        abort "copying output stats failed"
+
+    ssh ${ip} "cd ${DATA_DIR} && tar -cz output/*.result" |
+        (cd ${analysis_dir} && tar -xz) || abort "copying output results failed"
+
+    scp ${ip}:${LOG_DIR}/simulate ${analysis_dir}/ ||
+        abort "copying simulator log failed"
+}
+
+function fetch-data-from-cluster {
+    local ip_file=$1
+    local analysis_dir=$2
+
+    cluster-op fetch-data-from-master "" "${ip_file}" "${analysis_dir}"
+}
+
+## ----------------------------------------------------------------------------
 ## Archive a shared directory.
 ## ----------------------------------------------------------------------------
 
@@ -1146,6 +1200,17 @@ function do-command {
                 archive-shared-on-host "${IP}"
             else
                 archive-shared
+            fi
+            ;;
+
+        fetch-data)
+            echo "Fetch analysis data..."
+            if [ "$IP_FILE" != "" ]; then
+                fetch-data-from-cluster "${IP_FILE}" "${LOCAL_PATH}"
+            elif [ "$IP" != "" ]; then
+                fetch-data-from-master "${IP}" "${LOCAL_PATH}"
+            else
+                fetch-data "${LOCAL_PATH}"
             fi
             ;;
 
