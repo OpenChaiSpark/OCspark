@@ -19,20 +19,36 @@
 ## Note: cpu sees to be on a different TZ (7 hours ahead) so we subtract
 ## 7 hours from s and d's timestamps.
 
-d <- read.csv("output.stat.sorted", sep=" ", header=FALSE) %>%
+## Process the output result file timestamps.
+
+d <- read.csv("output.stat", sep=" ", header=FALSE) %>%
     mutate(n = as.integer(str_extract(V4, "[0-9]+"))) %>%
     mutate(result.create.time =
                as.POSIXct(strptime(paste(V1, V2), "%Y-%m-%d %H:%M:%OS"))) %>%
     select(-c(V1, V2, V3, V4)) %>%
     mutate(result.create.time = result.create.time - 7 * 60 * 60)
 
+## Lag the (time-sorted) result file timestamps) to see inter-result
+## arrival times.
+
 lagged <- d %>%
+    arrange(result.create.time) %>%
     mutate(delta = as.double((result.create.time - lag(result.create.time)) * 1000)) %>%
     tail(-1)
 
-
 plot(density(lagged$delta))
 summary(lagged$delta)
+
+positive.lag <- lagged %>% filter(delta > 0)
+
+plot(density(positive.lag$delta))
+summary(positive.lag$delta)
+
+## Find any missing outputs (typically didn't get processed in time).
+
+setdiff(1:max(d$n), d$n)
+
+## Process the simulator log.
 
 s <- read.csv("simulate", header = FALSE, sep = " ") %>%
     tail(-1) %>%
@@ -52,9 +68,20 @@ files.tmp <- list.files("output") %>%
     unlist %>%
     lapply(readLines) %>%
     lapply(t)
-files <- files.tmp %>%
+
+## Check for bad result files (eg. "(null)" instead of dummytf output).
+
+files.bad <- files.tmp %>% keep(function(x) length(x) != 13)
+files.good <- files.tmp %>% keep(function(x) length(x) == 13)
+
+length(files.bad)
+
+files.bad
+
+files <- files.good %>%
+    keep(function(x) length(x) == 13) %>%
     unlist %>%
-    matrix(nrow = length(files.tmp), byrow= TRUE) %>%
+    matrix(nrow = length(files.good), byrow = TRUE) %>%
     as.data.frame %>%
     mutate(V1 = str_replace(V1, ".+: ", ""),
            V2 = str_replace(V2, ".+: ", ""),
@@ -97,9 +124,12 @@ files <- files.tmp %>%
                "na.delay.start",
                "na.delay.stop"))
 
+## Join all three sources on image number and calculate delta-times.
+
 data <- files %>%
     inner_join(s, by="n") %>%
     inner_join(d, by="n") %>%
+    arrange(n) %>%
     mutate(delta.full = result.create.time - sim.create.time,
            delta.start.tf = tf.start - sim.create.time,
            delta.finish.tf = tf.stop - sim.create.time,
@@ -107,4 +137,20 @@ data <- files %>%
            delta.pause.newapp = na.delay.start - sim.create.time,
            delta.finish.newapp = na.total.stop - sim.create.time)
 
-## TODO: adjust some of the times by timezone
+
+## Look at pending/processed stats.
+
+max(data$na.pending.images)
+max(data$na.pending.results)
+max(data$na.processed.results)
+
+data %>% group_by(na.pending.results) %>% summarize(n())
+data %>% group_by(na.pending.images) %>% summarize(n())
+data %>% group_by(na.processed.results) %>% summarize(n())
+
+dd <- data %>% head(500)
+
+plot(x = dd$n, y = dd$delta.full, type = 'l')
+lines(x = dd$n, y = dd$delta.start.tf, col = 'red')
+lines(x = dd$n, y = dd$delta.finish.tf, col = 'orange')
+lines(x = dd$n, y = dd$delta.start.newapp,col = 'green')
