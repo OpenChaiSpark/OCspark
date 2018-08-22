@@ -72,15 +72,14 @@ files.tmp <- list.files("output") %>%
 
 ## Check for bad result files (eg. "(null)" instead of dummytf output).
 
-files.bad <- files.tmp %>% keep(function(x) length(x) != 13)
-files.good <- files.tmp %>% keep(function(x) length(x) == 13)
+files.bad <- files.tmp %>% keep(function(x) length(x) != 16)
+files.good <- files.tmp %>% keep(function(x) length(x) == 16)
 
 length(files.bad)
 
 files.bad
 
 files <- files.good %>%
-    keep(function(x) length(x) == 13) %>%
     unlist %>%
     matrix(nrow = length(files.good), byrow = TRUE) %>%
     as.data.frame %>%
@@ -96,25 +95,34 @@ files <- files.good %>%
            V10 = str_replace(V10, ".+: ", ""),
            V11 = str_replace(V11, ".+: ", ""),
            V12 = str_replace(V12, ".+: ", ""),
-           V13 = str_replace(V13, ".+: ", "")) %>%
-    mutate(V1 = str_replace(V1, ".+/", "")) %>%
-    mutate(V1 = str_extract(V1, "[0-9]+")) %>%
-    mutate(V2 = as.POSIXct(strptime(V2, "%Y-%m-%d %H:%M:%OS"))) %>%
-    mutate(V3 = as.POSIXct(strptime(V3, "%Y-%m-%d %H:%M:%OS"))) %>%
-    mutate(V10 = as.POSIXct(strptime(V10, "%Y-%m-%d %H:%M:%OS"))) %>%
-    mutate(V11 = as.POSIXct(strptime(V11, "%Y-%m-%d %H:%M:%OS"))) %>%
-    mutate(V12 = as.POSIXct(strptime(V12, "%Y-%m-%d %H:%M:%OS"))) %>%
+           V13 = str_replace(V13, ".+: ", ""),
+           V14 = str_replace(V14, ".+: ", ""),
+           V15 = str_replace(V15, ".+: ", ""),
+           V16 = str_replace(V16, ".+: ", "")) %>%
+    mutate(V2 = str_replace(V2, ".+/", "")) %>%
+    mutate(V3 = str_replace(V3, ".+/", "")) %>%
+    mutate(V2 = str_extract(V2, "[0-9]+")) %>%
+    mutate(V3 = str_extract(V3, "[0-9]+")) %>%
+    mutate(V4 = as.POSIXct(strptime(V4, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(V5 = as.POSIXct(strptime(V5, "%Y-%m-%d %H:%M:%OS"))) %>%
     mutate(V13 = as.POSIXct(strptime(V13, "%Y-%m-%d %H:%M:%OS"))) %>%
-    mutate(V1 = as.integer(V1),
-           V5 = as.integer(V5),
-           V6 = as.integer(V6),
-           V7 = as.integer(V7),
+    mutate(V14 = as.POSIXct(strptime(V14, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(V15 = as.POSIXct(strptime(V15, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(V16 = as.POSIXct(strptime(V16, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(V2 = as.integer(V2),
+           V3 = as.integer(V3),
            V8 = as.integer(V8),
-           V9 = as.integer(V9)) %>%
-    setNames(c("n",
+           V9 = as.integer(V9),
+           V10 = as.integer(V10),
+           V11 = as.integer(V11),
+           V12 = as.integer(V12)) %>%
+    setNames(c("host",
+               "n",
+               "n.copy",
                "tf.start",
                "tf.stop",
-               "tf.duration",
+               "tf.task.duration",
+               "tf.total.duration",
                "na.total.duration",
                "na.delay.duration",
                "na.pending.results",
@@ -123,7 +131,8 @@ files <- files.good %>%
                "na.total.start",
                "na.total.stop",
                "na.delay.start",
-               "na.delay.stop"))
+               "na.delay.stop")) %>%
+    select(-n.copy)
 
 ## Join all three sources on image number and calculate delta-times.
 
@@ -163,4 +172,40 @@ dd %>%
     ggvis(~n, ~seconds) %>%
     group_by(metric) %>%
     layer_paths(stroke = ~metric) %>%
+    add_legend('stroke')
+
+## Group by host.
+
+data %>%
+    group_by(host) %>%
+    summarize(n(),
+              mean(delta.full),
+              mean(delta.pause.newapp),
+              mean(delta.start.tf),
+              mean(delta.finish.tf),
+              mean(delta.start.newapp),
+              mean(delta.pause.newapp),
+              mean(delta.finish.newapp)) %>%
+    as.data.frame
+
+data %>%
+    group_by(host) %>%
+    summarize(n(), mean(delta.full), median(delta.full), max(delta.full))
+
+cc <- dd %>% head(200)
+
+cc %>%
+    select(host, n, delta.full, delta.start.tf, delta.finish.tf,
+           delta.start.newapp, delta.finish.newapp) %>%
+    gather("metric", "seconds", -n, -host) %>%
+    ggvis(~n, ~seconds) %>%
+    group_by(host, metric) %>%
+    layer_points(stroke = ~metric, shape = ~host) %>%
+    add_legend('stroke', 'shape', properties = legend_props(legend = list(y = 120)))
+
+dd %>%
+    select(host, n, delta.full) %>%
+    ggvis(~n, ~delta.full) %>%
+    group_by(host) %>%
+    layer_paths(stroke = ~host) %>%
     add_legend('stroke')
