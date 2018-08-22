@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 use Time::HiRes qw(gettimeofday usleep);
 use POSIX qw(strftime);
+use Sys::Hostname;
 
 my %config = (
               FSEVENTS => 0,
-#              DURATION => 28,  # milliseconds
-              DURATION => 5000,  # milliseconds
+              DURATION => 28,  # milliseconds
+#              DURATION => 5000,  # milliseconds
 #              BLOB => 1,
               BLOB => 0,
               BLOB_BYTES => 2 * 1024 * 1024,
@@ -127,9 +128,11 @@ sub processImage {
   my $stop_timestamp = getTime();
   my $task_duration = $t2 - $t1;
   my $total_duration = $t3 - $t1;
+  my $host = hostname();
 
   open(FH, ">", "$output");
 
+  print FH "dummytf host: $host\n";
   print FH "dummytf input: $input\n";
   print FH "dummytf output: $output\n";
   print FH "dummytf start timestamp: " . $start_timestamp . "\n";

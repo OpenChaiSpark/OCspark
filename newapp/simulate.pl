@@ -19,10 +19,11 @@ use strict;
 my %config = (
               TEST_IMAGE => "/shared/test.jpg",
 #              TEST_IMAGE => "/Users/mike/tmp/cat.jpg",
-              PERIOD => 10,   # milliseconds
+#              PERIOD => 1000,   # milliseconds
 #              PERIOD => 1000,   # milliseconds
 #              PERIOD => 500,   # milliseconds
 #              PERIOD => 200,   # milliseconds
+              PERIOD => 10,   # milliseconds
 #              PERIOD => 5000,   # milliseconds
               ANALYSE => 0,
               DEBUG => 0
