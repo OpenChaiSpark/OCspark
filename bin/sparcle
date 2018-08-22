@@ -482,7 +482,7 @@ function stop-slave {
     local dummy_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
 
     if (pgrep -f "${dummy_pattern}" > /dev/null); then
-        pkill -f "${dummy_pattern}" || abort "killing slave failed"
+        pkill -f "${dummy_pattern}" || abort "killing dummytf failed"
         status "killed dummytf"
     else
         status "dummytf already stopped"
@@ -491,6 +491,27 @@ function stop-slave {
 
 function stop-remote-slave { remote-op stop-slave $1; }
 function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
+
+## ----------------------------------------------------------------------------
+## Stop a slave on a remote host (typically a GPU).  Note: we match
+## java as the start of the string in order to avoid matching the
+## pkill command itself.  Note: we make this idempotent by ignoring an
+## error condition.
+## ----------------------------------------------------------------------------
+
+function stop-dummytf {
+    local dummy_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
+
+    if (pgrep -f "${dummy_pattern}" > /dev/null); then
+        pkill -f "${dummy_pattern}" || abort "killing dummytf failed"
+        status "killed dummytf"
+    else
+        status "dummytf already stopped"
+    fi
+}
+
+function stop-remote-dummytf { remote-op stop-dummytf $1; }
+function stop-cluster-dummytfs { cluster-op "" stop-remote-dummytf $@; }
 
 ## ----------------------------------------------------------------------------
 ## Start a master (eg. on x-gene or i3).
@@ -1257,6 +1278,17 @@ function do-command {
                 stop-remote-slave "${IP}"
             else
                 stop-slave
+            fi
+            ;;
+
+        stop-dummytf)
+            echo "Stopping dummytf(s)..."
+            if [ "$IP_FILE" != "" ]; then
+                stop-cluster-dummytfs "${IP_FILE}"
+            elif [ "$IP" != "" ]; then
+                stop-remote-dummytf "${IP}"
+            else
+                stop-dummytf
             fi
             ;;
 
