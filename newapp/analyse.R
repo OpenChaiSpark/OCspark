@@ -26,7 +26,8 @@ d <- read.csv("output.stat", sep=" ", header=FALSE) %>%
     mutate(result.create.time =
                as.POSIXct(strptime(paste(V1, V2), "%Y-%m-%d %H:%M:%OS"))) %>%
     select(-c(V1, V2, V3, V4)) %>%
-    mutate(result.create.time = result.create.time - 7 * 60 * 60)
+    mutate(result.create.time = result.create.time - 7 * 60 * 60) %>%
+    arrange(n)
 
 ## Lag the (time-sorted) result file timestamps) to see inter-result
 ## arrival times.
@@ -154,3 +155,12 @@ plot(x = dd$n, y = dd$delta.full, type = 'l')
 lines(x = dd$n, y = dd$delta.start.tf, col = 'red')
 lines(x = dd$n, y = dd$delta.finish.tf, col = 'orange')
 lines(x = dd$n, y = dd$delta.start.newapp,col = 'green')
+
+dd %>%
+    select(n, delta.full, delta.start.tf, delta.finish.tf,
+           delta.start.newapp, delta.finish.newapp) %>%
+    gather("metric", "seconds", -n) %>%
+    ggvis(~n, ~seconds) %>%
+    group_by(metric) %>%
+    layer_paths(stroke = ~metric) %>%
+    add_legend('stroke')
