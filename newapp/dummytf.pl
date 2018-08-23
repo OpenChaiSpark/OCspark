@@ -1,12 +1,13 @@
 #!/usr/bin/perl
-use Time::HiRes qw(gettimeofday usleep);
+use Time::HiRes qw(gettimeofday usleep stat);
 use POSIX qw(strftime);
 use Sys::Hostname;
+use strict;
 
 my %config = (
               FSEVENTS => 0,
-              DURATION => 28,  # milliseconds
-#              DURATION => 5000,  # milliseconds
+#              DURATION => 28,  # milliseconds
+              DURATION => 100,  # milliseconds
 #              BLOB => 1,
               BLOB => 0,
               BLOB_BYTES => 2 * 1024 * 1024,
@@ -66,14 +67,16 @@ sub milliTime { gettimeofday * 1000; }
 
 ## Return POSIX formatted timestamp.
 
-sub getTime {
-  my $t = gettimeofday;
+sub formatTime {
+  my $t = shift;
   my $date = strftime("%Y-%m-%d %H:%M:%S", localtime($t));
 
   $date .= sprintf ".%03d", ($t - int($t))*1000;
 
   return $date;
 }
+
+sub getTime { formatTime(scalar gettimeofday) }
 
 ## Do something (that can't be optimized away) for exactly 28 ms.
 
@@ -93,29 +96,42 @@ sub getFiles {
 
   opendir my $dh, $dir or die "Could not open '$dir' for reading: $!\n";
 
-  my @files = sort {(stat $a)[9] <=> (stat $b)[9]}
-    map { join("/", $dir, $_) } readdir($dh);
+  my @files = readdir($dh);
 
   close($dh);
 
   @files;
 }
 
-sub filterImages { grep { /\.jpe?g$/ } @_; }
+sub filterImages { grep { /\.jpe?g$/ } @_ }
 
-sub getImages { filterImages(getFiles(@_)); }
+sub getImages { filterImages(getFiles(@_)) }
 
 sub processImage {
   my $image_dir = shift;
 
-  my @images = getImages($image_dir);
+  my @image_names = getImages($image_dir);
 
-  return unless (@images);
+  return unless (@image_names);
 
-  my $input = shift @images;
-  my $pending_images = scalar(@images);
+  ## Find the earliest image and (by) its timestamp, efficiently.
+
+  my @images = map { join("/", $image_dir, $_) } @image_names;
+  my @image_mod_times = map { (stat $_)[9] } @images;
+  my $idx = 0;
+
+  for (1..$#image_mod_times) {
+    $idx = $_ if $image_mod_times[$_] < $image_mod_times[$idx];
+  }
+
+  my $input = $images[$idx];
+  my $input_timestamp = formatTime($image_mod_times[$idx]);
+  my $pending_images = $#image_mod_times;
   my $start_timestamp = getTime();
   my $output = join(".", $input, "json");
+
+  ## Perform the fixed task.
+
   my $t1 = milliTime();
 
   fixedTask();
@@ -135,6 +151,7 @@ sub processImage {
   print FH "dummytf host: $host\n";
   print FH "dummytf input: $input\n";
   print FH "dummytf output: $output\n";
+  print FH "dummytf input timestamp: " . $input_timestamp . "\n";
   print FH "dummytf start timestamp: " . $start_timestamp . "\n";
   print FH "dummytf stop timestamp: " . $stop_timestamp . "\n";
   print FH "dummytf task duration: " . $task_duration . "\n";
@@ -146,5 +163,5 @@ sub processImage {
 
   unlink($input);
 
-  printf STDERR "input=$input output=$output start=$start_timestamp stop=$stop_timestamp task_duration=$task_duration total_duration=$total_duration pending_images=$pending_images\n";
+  printf STDERR "input=$input output=$output input_timestamp=$input_timestamp start=$start_timestamp stop=$stop_timestamp task_duration=$task_duration total_duration=$total_duration pending_images=$pending_images\n";
 }
