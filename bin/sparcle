@@ -943,6 +943,32 @@ function deploy-shared-to-cluster {
 }
 
 ## ----------------------------------------------------------------------------
+## Archive a shared directory.
+## ----------------------------------------------------------------------------
+
+## TODO: modify to take sudo password first and then pass on to all hosts.
+
+function archive-shared {
+    local shared_dir=$1
+
+    [ -d ${shared_dir} ] || abort "can't find shared dir"
+
+    local target="${ARCHIVE_DIR}/$(mktemp -u shared.XXXXXX)" ||
+        abort "creating shared dir archive name failed"
+
+    [ -e ${target} ] && abort "archive shared dir exists"
+
+    sudo mkdir -p ${ARCHIVE_DIR} || abort "creating archive dir failed"
+    sudo mv ${SHARED_DIR} ${target} || abort "archiving of shared dir failed"
+}
+
+function archive-shared-on-host { remote-op archive-shared "$1"; }
+
+function archive-shared-on-cluster {
+    cluster-op archive-shared-on-host archive-shared-on-host "$@"
+}
+
+## ----------------------------------------------------------------------------
 ## Fetch data for analysis.
 ## ----------------------------------------------------------------------------
 
@@ -997,29 +1023,17 @@ function fetch-data-from-cluster {
 }
 
 ## ----------------------------------------------------------------------------
-## Archive a shared directory.
+## Analyse data.
 ## ----------------------------------------------------------------------------
 
-## TODO: modify to take sudo password first and then pass on to all hosts.
+function analyse-data {
+    local analysis_dir=$1
 
-function archive-shared {
-    local shared_dir=$1
+    [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
+    [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
 
-    [ -d ${shared_dir} ] || abort "can't find shared dir"
-
-    local target="${ARCHIVE_DIR}/$(mktemp -u shared.XXXXXX)" ||
-        abort "creating shared dir archive name failed"
-
-    [ -e ${target} ] && abort "archive shared dir exists"
-
-    sudo mkdir -p ${ARCHIVE_DIR} || abort "creating archive dir failed"
-    sudo mv ${SHARED_DIR} ${target} || abort "archiving of shared dir failed"
-}
-
-function archive-shared-on-host { remote-op archive-shared "$1"; }
-
-function archive-shared-on-cluster {
-    cluster-op archive-shared-on-host archive-shared-on-host "$@"
+    (cd ${analysis_dir} && Rscript ${OCSPARK}/newapp/analyse.R) ||
+        abort "failed to run Rscript"
 }
 
 ## ----------------------------------------------------------------------------
@@ -1211,6 +1225,17 @@ function do-command {
                 fetch-data-from-master "${IP}" "${LOCAL_PATH}"
             else
                 fetch-data "${LOCAL_PATH}"
+            fi
+            ;;
+
+        analyse-data)
+            echo "Analyse data..."
+            if [ "$IP_FILE" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            elif [ "$IP" != "" ]; then
+                abort "can't do this on a remote host or cluster"
+            else
+                analyse-data "${LOCAL_PATH}"
             fi
             ;;
 
