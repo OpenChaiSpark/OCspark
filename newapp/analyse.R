@@ -19,6 +19,13 @@
 ## Note: cpu sees to be on a different TZ (7 hours ahead) so we subtract
 ## 7 hours from s and d's timestamps.
 
+library(dplyr)
+library(ggvis)
+library(ggplot2)
+library(stringr)
+library(purrr)
+library(tidyr)
+
 ## Process the output result file timestamps.
 
 d <- read.csv("output.stat", sep=" ", header=FALSE) %>%
@@ -39,6 +46,16 @@ lagged <- d %>%
 
 plot(density(lagged$delta))
 summary(lagged$delta)
+
+print("Interarrival times:")
+print(summary(lagged$delta))
+
+ll <- lagged %>% mutate(i = 1:nrow(lagged)) %>% head(500)
+
+ll %>% ggplot(aes(x = i, y = delta)) + geom_line(color='darkgreen')
+
+ggsave("interarrival.pdf", width = 32, height = 18, units = "cm")
+
 
 positive.lag <- lagged %>% filter(delta > 0)
 
@@ -77,7 +94,7 @@ files.good <- files.tmp %>% keep(function(x) length(x) == 16)
 
 length(files.bad)
 
-files.bad
+##files.bad
 
 files <- files.good %>%
     unlist %>%
@@ -160,19 +177,25 @@ data %>% group_by(na.processed.results) %>% summarize(n())
 
 dd <- data %>% head(500)
 
-plot(x = dd$n, y = dd$delta.full, type = 'l')
-lines(x = dd$n, y = dd$delta.start.tf, col = 'red')
-lines(x = dd$n, y = dd$delta.finish.tf, col = 'orange')
-lines(x = dd$n, y = dd$delta.start.newapp,col = 'green')
+#plot(x = dd$n, y = dd$delta.full, type = 'l')
+#lines(x = dd$n, y = dd$delta.start.tf, col = 'red')
+#lines(x = dd$n, y = dd$delta.finish.tf, col = 'orange')
+#lines(x = dd$n, y = dd$delta.start.newapp,col = 'green')
 
-dd %>%
+dd.by.metric <- dd %>%
     select(n, delta.full, delta.start.tf, delta.finish.tf,
            delta.start.newapp, delta.finish.newapp) %>%
     gather("metric", "seconds", -n) %>%
+    group_by(metric)
+
+dd.by.metric %>%
     ggvis(~n, ~seconds) %>%
-    group_by(metric) %>%
     layer_paths(stroke = ~metric) %>%
     add_legend('stroke')
+
+dd.by.metric %>% ggplot(aes(x=n, y=seconds, group=metric, color=metric)) + geom_line()
+
+ggsave("bymetric.pdf", width = 32, height = 18, units = "cm")
 
 ## Group by host.
 
@@ -203,9 +226,17 @@ cc %>%
     layer_points(stroke = ~metric, shape = ~host) %>%
     add_legend('stroke', 'shape', properties = legend_props(legend = list(y = 120)))
 
-dd %>%
+## Plot delta.full vs n, grouped by host.
+
+dd.by.host <- dd %>%
     select(host, n, delta.full) %>%
+    group_by(host)
+
+dd.by.host %>%
     ggvis(~n, ~delta.full) %>%
-    group_by(host) %>%
     layer_paths(stroke = ~host) %>%
     add_legend('stroke')
+
+dd.by.host %>% ggplot(aes(x=n, y=delta.full, group=host, color=host)) + geom_line()
+
+ggsave("byhost.pdf", width = 32, height = 18, units = "cm")
