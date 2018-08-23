@@ -6,8 +6,8 @@ use strict;
 
 my %config = (
               FSEVENTS => 0,
-#              DURATION => 28,  # milliseconds
-              DURATION => 100,  # milliseconds
+              DURATION => 28,  # milliseconds
+#              DURATION => 100,  # milliseconds
 #              BLOB => 1,
               BLOB => 0,
               BLOB_BYTES => 2 * 1024 * 1024,

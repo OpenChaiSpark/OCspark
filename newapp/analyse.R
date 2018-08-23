@@ -89,8 +89,8 @@ files.tmp <- list.files("output") %>%
 
 ## Check for bad result files (eg. "(null)" instead of dummytf output).
 
-files.bad <- files.tmp %>% keep(function(x) length(x) != 16)
-files.good <- files.tmp %>% keep(function(x) length(x) == 16)
+files.bad <- files.tmp %>% keep(function(x) length(x) != 17)
+files.good <- files.tmp %>% keep(function(x) length(x) == 17)
 
 length(files.bad)
 
@@ -115,27 +115,30 @@ files <- files.good %>%
            V13 = str_replace(V13, ".+: ", ""),
            V14 = str_replace(V14, ".+: ", ""),
            V15 = str_replace(V15, ".+: ", ""),
-           V16 = str_replace(V16, ".+: ", "")) %>%
+           V16 = str_replace(V16, ".+: ", ""),
+           V17 = str_replace(V17, ".+: ", "")) %>%
     mutate(V2 = str_replace(V2, ".+/", "")) %>%
     mutate(V3 = str_replace(V3, ".+/", "")) %>%
     mutate(V2 = str_extract(V2, "[0-9]+")) %>%
     mutate(V3 = str_extract(V3, "[0-9]+")) %>%
     mutate(V4 = as.POSIXct(strptime(V4, "%Y-%m-%d %H:%M:%OS"))) %>%
     mutate(V5 = as.POSIXct(strptime(V5, "%Y-%m-%d %H:%M:%OS"))) %>%
-    mutate(V13 = as.POSIXct(strptime(V13, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(V6 = as.POSIXct(strptime(V6, "%Y-%m-%d %H:%M:%OS"))) %>%
     mutate(V14 = as.POSIXct(strptime(V14, "%Y-%m-%d %H:%M:%OS"))) %>%
     mutate(V15 = as.POSIXct(strptime(V15, "%Y-%m-%d %H:%M:%OS"))) %>%
     mutate(V16 = as.POSIXct(strptime(V16, "%Y-%m-%d %H:%M:%OS"))) %>%
+    mutate(V17 = as.POSIXct(strptime(V17, "%Y-%m-%d %H:%M:%OS"))) %>%
     mutate(V2 = as.integer(V2),
            V3 = as.integer(V3),
-           V8 = as.integer(V8),
            V9 = as.integer(V9),
            V10 = as.integer(V10),
            V11 = as.integer(V11),
-           V12 = as.integer(V12)) %>%
+           V12 = as.integer(V12),
+           V13 = as.integer(V13)) %>%
     setNames(c("host",
                "n",
                "n.copy",
+               "tf.input.create.time",
                "tf.start",
                "tf.stop",
                "tf.task.duration",
@@ -162,8 +165,9 @@ data <- files %>%
            delta.finish.tf = tf.stop - sim.create.time,
            delta.start.newapp = na.total.start - sim.create.time,
            delta.pause.newapp = na.delay.start - sim.create.time,
-           delta.finish.newapp = na.total.stop - sim.create.time)
-
+           delta.finish.newapp = na.total.stop - sim.create.time,
+           tf.start.delay=tf.start - tf.input.create.time,
+           image.copy.delay=tf.input.create.time - sim.create.time)
 
 ## Look at pending/processed stats.
 
@@ -240,3 +244,21 @@ dd.by.host %>%
 dd.by.host %>% ggplot(aes(x=n, y=delta.full, group=host, color=host)) + geom_line()
 
 ggsave("byhost.pdf", width = 32, height = 18, units = "cm")
+
+## Look at image copy delay.
+
+dd %>% ggplot(aes(x=n, y=slave.copy.delay)) + geom_line()
+
+dd.by.metric.2 <- dd %>%
+    select(n, delta.full, image.copy.delay) %>%
+    gather("metric", "seconds", -n) %>%
+    group_by(metric)
+
+dd.by.metric.2 %>%
+    ggvis(~n, ~seconds) %>%
+    layer_paths(stroke = ~metric) %>%
+    add_legend('stroke')
+
+dd.by.metric.2 %>% ggplot(aes(x=n, y=seconds, group=metric, color=metric)) + geom_line()
+
+ggsave("bymetric2.pdf", width = 32, height = 18, units = "cm")
