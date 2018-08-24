@@ -407,7 +407,7 @@ function create-dirs {
 
 function start-slave {
     local log_ext="$(mktemp -u XXXXXX)"
-    local ip=$(hostname -I | cut -f1 -d" " 2> /dev/null)
+    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
     local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:)
 
     [[ "${ip}" == "" ]] && abort "failed to look up IP address"
@@ -558,8 +558,8 @@ function start-master {
 
     ## Make sure the IP address matches the config.
     
-    local ip=$(hostname -I | cut -f1 -d" " 2> /dev/null)
-    local registry_ip=$(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:)
+    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
+    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
 
     if [[ "${ip}" != "" ]] && [[ "${registry_ip}" != "" ]] &&
            [[ "${ip}" != "${registry_ip}" ]]; then
@@ -636,7 +636,7 @@ function start-simulator {
 
     ## Archive the old log file if present.
 
-    local log_ext="$(mktemp -u XXXXXX)" || abort "creating simulator log extension failed"
+    local log_ext="$(mktemp -u XXXXXX)"
     local log_file="${LOG_DIR}/simulate"
 
     if [[ -e "${log_file}" ]]; then
@@ -646,7 +646,7 @@ function start-simulator {
 
     ## Make sure the IP address matches the config.
 
-    local ip=$(hostname -I | cut -f1 -d" " 2> /dev/null)
+    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
     local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
 
     if [[ "${ip}" != "" ]] && [[ "${registry_ip}" != "" ]] &&
@@ -985,8 +985,7 @@ function fetch-data {
     [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
     [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
 
-    local stat_file="$(mktemp -u /tmp/output.XXXXXX)" ||
-        abort "creating temporary output stat file failed"
+    local stat_file="$(mktemp -u /tmp/output.XXXXXX)"
 
     (cd ${DATA_DIR}/output && stat -c '%y %n' *.jpg.result > ${stat_file}) ||
         abort "gathering output stats failed"
@@ -1006,8 +1005,7 @@ function fetch-data-from-master {
     [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
     [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
 
-    local stat_file="$(mktemp -u /tmp/output.XXXXXX)" ||
-        abort "creating temporary output stat file failed"
+    local stat_file="$(mktemp -u /tmp/output.XXXXXX)"
 
     ssh ${ip} "cd ${DATA_DIR}/output && stat -c '%y %n' *.jpg.result > ${stat_file}" ||
         abort "gathering output stats failed"
