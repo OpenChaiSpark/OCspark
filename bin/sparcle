@@ -225,10 +225,12 @@ function setup {
     ## Set up java.
 
     sudo add-apt-repository ppa:webupd8team/java || abort "set java repo failed"
+    sudo apt-add-repository universe || abort "set universe repo failed"
     sudo dpkg --configure -a || abort "dpkg configure failed"
     sudo apt-get update || abort "update failed"
     sudo apt-get install -y oracle-java8-installer || abort "install java failed"
     sudo apt-get install -y oracle-java8-set-default || abort "set default failed"
+    sudo apt-get install python-pip || abort "install pip failed"
 
     ## Set up misc other packages.
 
@@ -404,11 +406,12 @@ function create-dirs {
 }
 
 function start-slave {
-    local log_ext="$(mktemp -u XXXXXX)" || abort "creating slave log extension failed"
-    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
-    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt |
-                     cut -f2 -d" " | cut -f2 -d:) ||
-        abort "inferring port from ip address failed"
+    local log_ext="$(mktemp -u XXXXXX)"
+    local ip=$(hostname -I | cut -f1 -d" " 2> /dev/null)
+    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:)
+
+    [[ "${ip}" == "" ]] && abort "failed to look up IP address"
+    [[ "${port}" == "" ]] && abort "failed to look up port from IP"
 
     ## Make sure there are no existing slave processes running.
 
@@ -545,7 +548,7 @@ function start-master {
 
     ## Archive the old log file if present.
 
-    local log_ext="$(mktemp -u XXXXXX)" || abort "creating master log extension failed"
+    local log_ext="$(mktemp -u XXXXXX)"
     local log_file="${LOG_DIR}/master"
 
     if [[ -e "${log_file}" ]]; then
@@ -555,11 +558,13 @@ function start-master {
 
     ## Make sure the IP address matches the config.
     
-    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
-    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
+    local ip=$(hostname -I | cut -f1 -d" " 2> /dev/null)
+    local registry_ip=$(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:)
 
-    [[ "${ip}" != "${registry_ip}" ]] &&
+    if [[ "${ip}" != "" ]] && [[ "${registry_ip}" != "" ]] &&
+           [[ "${ip}" != "${registry_ip}" ]]; then
         abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
+    fi
 
     ## Start the master.
 
@@ -641,11 +646,13 @@ function start-simulator {
 
     ## Make sure the IP address matches the config.
 
-    local ip=$(echo $(hostname -I)) || abort "querying hostname failed"
+    local ip=$(hostname -I | cut -f1 -d" " 2> /dev/null)
     local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
 
-    [[ "${ip}" != "${registry_ip}" ]] &&
+    if [[ "${ip}" != "" ]] && [[ "${registry_ip}" != "" ]] &&
+           [[ "${ip}" != "${registry_ip}" ]]; then
         abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
+    fi
 
     ## Start the simulator.
 
