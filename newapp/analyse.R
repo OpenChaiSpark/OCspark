@@ -247,7 +247,7 @@ ggsave("byhost.pdf", width = 32, height = 18, units = "cm")
 
 ## Look at image copy delay.
 
-dd %>% ggplot(aes(x=n, y=slave.copy.delay)) + geom_line()
+dd %>% ggplot(aes(x=n, y=image.copy.delay)) + geom_line()
 
 dd.by.metric.2 <- dd %>%
     select(n, delta.full, image.copy.delay) %>%
