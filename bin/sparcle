@@ -572,6 +572,7 @@ function start-master {
 
     export GITDIR=${DIST_DIR}
     nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
+#    nohup java -Xmx4096m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
         abort "starting master on ip ${ip} failed" &
     status "started master on ip ${ip}"
 }
@@ -983,7 +984,9 @@ function fetch-data {
     local analysis_dir=$1
 
     [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
-    [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
+    [ -d ${analysis_dir} ] && abort "specified local data dir already exists"
+
+    mkdir -p ${analysis_dir} || abort "make local data dir failed"
 
     local stat_file="$(mktemp -u /tmp/output.XXXXXX)"
 
@@ -1003,7 +1006,9 @@ function fetch-data-from-master {
     local analysis_dir=$2
 
     [ "${analysis_dir}" == "" ] && abort "no analysis dir specified"
-    [ -d ${analysis_dir} ] || abort "can't find local analysis dir"
+    [ -d ${analysis_dir} ] && abort "specified local data dir already exists"
+
+    mkdir -p ${analysis_dir} || abort "make local data dir failed"
 
     local stat_file="$(mktemp -u /tmp/output.XXXXXX)"
 
