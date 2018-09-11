@@ -16,7 +16,8 @@ DEBUG=1
 #OCSPARKNAME=OCspark
 #OCSPARK=${OCSPARKDIR}/${DISTNAME}
 
-OCSPARK="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" > /dev/null && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
+OCSPARK="$(dirname "${HERE}")"
 OCSPARKNAME="$(basename "${OCSPARK}")"
 OCSPARKDIR="$(dirname "${OCSPARK}")"
 
