@@ -62,11 +62,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f status abort create-dirs ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f status abort create-dirs ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -114,7 +114,7 @@ function cluster-op {
             ## need to make sure that all the slaves are fully up
             ## before the master starts.
 
-            sleep 5
+            [[ "${VERSION}" == "1" ]] && sleep 5
 
             [ "${master_callback}" != "" ] && ${master_callback} ${ip} "$@"
         else
@@ -206,43 +206,100 @@ function authorize {
 }
 
 function authorize-host {
-    [ -e "${HOME}/.ssh/id_dsa.pub" ] || abort "No DSA public key found"
-    [ -e "${HOME}/.ssh/id_rsa.pub" ] || abort "No RSA public key found"
+    [ -e "${HOME}/.ssh/id_dsa.pub" ] || abort "No personal DSA public key found"
+    [ -e "${HOME}/.ssh/id_rsa.pub" ] || abort "No personal RSA public key found"
+    [ -e "${HOME}/.ssh/id_rsa.sparcle.pub" ] || abort "No sparcle RSA public key found"
 
-    cat ${HOME}/.ssh/id_dsa.pub ${HOME}/.ssh/id_rsa.pub | remote-op authorize $1
+    cat ${HOME}/.ssh/id_dsa.pub ${HOME}/.ssh/id_rsa.pub ${HOME}/id_rsa.sparcle.pub |
+        remote-op authorize $1
 }
 
 function authorize-cluster { cluster-op authorize-host authorize-host $@; }
 
 ## ----------------------------------------------------------------------------
-## Install packages for a worker (runtime only).
+## Install packages for a worker (runtime only).  Note: GPUs must
+## already have been set up with a Jetpack (including CUDNN, which
+## seems not to be included by default).  Note: the oracle java
+## installer is only available after an apt-get update.
 ## ----------------------------------------------------------------------------
 
-## Let's remove the apt-get update for now since it's failing.  Let's
-## also skip installing screen since we don't need it yet.  Note: the
-## oracle java installer is only available after an apt-get update.
-
 function setup {
-    ## Set up java.
-
-    sudo add-apt-repository ppa:webupd8team/java || abort "set java repo failed"
     sudo apt-add-repository universe || abort "set universe repo failed"
     sudo dpkg --configure -a || abort "dpkg configure failed"
     sudo apt-get update || abort "update failed"
-    sudo apt-get install -y oracle-java8-installer || abort "install java failed"
-    sudo apt-get install -y oracle-java8-set-default || abort "set default failed"
-    sudo apt-get install python-pip || abort "install pip failed"
-
-    ## Set up misc other packages.
-
-##    sudo apt-get install -y screen || abort "install screen failed"
     sudo apt-get install -y software-properties-common ||
         abort "install common properties failed"
+    sudo apt-get install -y screen || abort "install screen failed"
+    sudo apt-get install python-pip || abort "install pip failed"
 
-    ## Install tensorflow (via wheel file we must distribute).
+    if [[ "${VERSION}" == "1" ]]; then
+        ## Set up java.
 
-#    pip install ${GIT_DIR}/wheel-files/tensorflow-1.5.0rc0-cp27-cp27mu-linux_aarch64.whl ||
-#        abort "install tensorflow failed"
+        sudo add-apt-repository ppa:webupd8team/java || abort "set java repo failed"
+        sudo apt-get install -y oracle-java8-installer || abort "install java failed"
+        sudo apt-get install -y oracle-java8-set-default || abort "set default failed"
+    else
+        ## Install tensorflow (via wheel file we must distribute).
+
+        pip install ${GIT_DIR}/wheel-files/tensorflow-1.5.0rc0-cp27-cp27mu-linux_aarch64.whl ||
+            abort "install tensorflow failed"
+
+        ## Set up for image handling.
+
+        sudo apt install -y libjpeg-dev || abort "apt install libjpeg-dev failed"
+        sudo apt install -y libblas-dev || abort "apt install libblas-dev failed"
+        sudo apt install -y liblapack-dev || abort "apt install liblapack-dev failed"
+        sudo pip install -y scikit-image || abort "pip install scikit-image failed"
+        sudo pip install -y cython || abort "pip install cython"
+        sudo pip install -y pyyaml || abort "pip install pyyaml failed"
+
+        ## Install opencv.  See: https://jkjung-avt.github.io/opencv3-on-tx2/
+
+        sudo apt-get purge libopencv*
+        sudo apt-get purge python-numpy
+        sudo apt autoremove
+        sudo apt-get update
+        sudo apt-get dist-upgrade
+        sudo apt-get install -y --only-upgrade g++-5 cpp-5 gcc-5
+        sudo apt-get install -y build-essential make cmake cmake-curses-gui\
+             g++ libavformat-dev libavutil-dev libswscale-dev libv4l-dev libeigen3-dev\
+             libglew-dev libgtk2.0-dev
+        sudo apt-get install -y libdc1394-22-dev libxine2-dev libgstreamer1.0-dev\
+             libgstreamer-plugins-base1.0-dev
+        sudo apt-get install -y libjpeg8-dev libjpeg-turbo8-dev libtiff5-dev\
+             libjasper-dev libpng12-dev libavcodec-dev
+        sudo apt-get install -y libxvidcore-dev libx264-dev libgtk-3-dev\
+             libatlas-base-dev gfortran
+        sudo apt-get install -y libopenblas-dev liblapack-dev liblapacke-dev
+        sudo apt-get install -y qt5-default
+        sudo apt-get install -y python3-dev python3-pip python3-tk
+        sudo pip3 install numpy
+        sudo pip3 install matplotlib
+        ##sudo vim /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
+        sudo apt-get install -y python-dev python-pip python-tk
+        sudo pip2 install numpy
+        sudo pip2 install matplotlib
+        ##sudo vim /usr/local/lib/python2.7/dist-packages/matplotlib/mpl-data/matplotlibrc
+        ##sudo vim /usr/local/cuda/include/cuda_gl_interop.h
+        (cd /usr/lib/aarch64-linux-gnu/ &&\
+             sudo ln -sf tegra/libGL.so libGL.so)
+        mkdir -p ${HOME}/src
+        (cd ${HOME}/src
+             wget https://github.com/opencv/opencv/archive/3.4.0.zip\
+                  -O opencv-3.4.0.zip
+             unzip opencv-3.4.0.zip
+             cd opencv-3.4.0
+             mkdir -p build
+             cd build
+             cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local\
+                   -D WITH_CUDA=ON -D CUDA_ARCH_BIN="6.2" -D CUDA_ARCH_PTX=""\
+                   -D WITH_CUBLAS=ON -D ENABLE_FAST_MATH=ON -D CUDA_FAST_MATH=ON\
+                   -D ENABLE_NEON=ON -D WITH_LIBV4L=ON -D BUILD_TESTS=OFF\
+                   -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF\
+                   -D WITH_QT=ON -D WITH_OPENGL=ON ..
+             make -j4
+             sudo make install)
+    fi
 }
 
 function setup-host { remote-op setup $1; }
@@ -385,10 +442,23 @@ function deploy-app-to-cluster {
 ## before the master.  Note: we must call "set -m" to prevent the
 ## discconnection of the tty (created by "ssh -t") from killing the
 ## slave process (even thought it's nohup'd).  Note: we wrap the IP
-## extraction in an echo to trim whitespace.
+## extraction in an echo to trim whitespace.  Note: sync dir is for
+## sparcle2.
 ## ----------------------------------------------------------------------------
 
-function create-dirs {
+function start-slave {
+    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
+
+    [[ "${ip}" == "" ]] && abort "failed to look up IP address"
+
+    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:)
+
+    [[ "${port}" == "" ]] && abort "failed to look up port from ip ${ip}"
+
+    local slave_number=$(echo $(grep -n ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d:))
+
+    [[ "${slave_number}" == "" ]] && abort "failed to look up slave number from ip ${ip}"
+
     ## Create the log dir if necessary.
 
     if [ ! -d "${LOG_DIR}" ]; then
@@ -399,67 +469,104 @@ function create-dirs {
     ## Create the data dir if necessary.
 
     if [ ! -d "${DATA_DIR}" ]; then
-        sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
-        sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
-        sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+        sudo mkdir ${DATA_DIR} || abort "creating data dir failed"
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
-}
 
-function start-slave {
-    local log_ext="$(mktemp -u XXXXXX)"
-    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
-    local port=$(fgrep ${ip} ${SHARED_DIR}/gpu-slaves.txt | cut -f2 -d" " | cut -f2 -d:)
-
-    [[ "${ip}" == "" ]] && abort "failed to look up IP address"
-    [[ "${port}" == "" ]] && abort "failed to look up port from IP"
+    mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+    mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+    mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+    mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
+    mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
 
     ## Make sure there are no existing slave processes running.
 
-    if (pgrep -f "^java .+ -jar ${SHARED_DIR}/tf" > /dev/null); then
-        status "slave already running"
-    else
-        create-dirs
+    local log_ext="$(mktemp -u XXXXXX)"
 
-        ## Archive the old log file if present.
+    if [[ "${VERSION}" == "1" ]]; then
+        if (pgrep -f "^java .+ -jar ${SHARED_DIR}/tf" > /dev/null); then
+            status "slave already running"
+        else
+            ## Archive the old log file if present.
 
-        local log_file="${LOG_DIR}/slave"
+            local log_file="${LOG_DIR}/slave"
 
-        if [[ -e "${log_file}" ]]; then
-            mv "${log_file}" "${log_file}.${log_ext}" ||
-                abort "archiving old slave log file ${log_file} failed"
+            if [[ -e "${log_file}" ]]; then
+                mv "${log_file}" "${log_file}.${log_ext}" ||
+                    abort "archiving old slave log file ${log_file} failed"
+            fi
+
+            ## Start the slave and dummy tensorflow processes.
+
+            set -m
+
+            nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
+                abort "starting slave on ip ${ip} port ${port} failed" &
+            status "started slave on ip ${ip} port ${port}"
         fi
 
-        ## Start the slave and dummy tensorflow processes.
+        if (pgrep -f "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" > /dev/null); then
+            status "dummytf already running"
+        else
+            ## Archive the old log file if present.
 
-        set -m
+            local dummy_log_file="${LOG_DIR}/dummytf"
 
-        nohup ${SHARED_DIR}/runtfserver.sh localhost ${port} > ${log_file} 2>&1 ||
-            abort "starting slave on ip ${ip} port ${port} failed" &
-        status "started slave on ip ${ip} port ${port}"
-    fi
+            if [[ -e "${dummy_log_file}" ]]; then
+                mv "${dummy_log_file}" "${dummy_log_file}.${log_ext}" ||
+                    abort "archiving old dummytf log file ${dummy_log_file} failed"
+            fi
 
-    if (pgrep -f "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" > /dev/null); then
-        status "dummytf already running"
+            ## Start the dummy tensorflow process.
+
+            set -m
+
+            nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}/tmp" > ${dummy_log_file} 2>&1 ||
+                abort "starting dummytf on ip ${ip} failed" &
+            status "started dummytf on ip ${ip}"
+        fi
     else
-        create-dirs
+        if (pgrep -f "^lsyncd" > /dev/null); then
+            status "slave sync already running"
+        else
+            ## Archive the old log file if present.
 
-        ## Archive the old log file if present.
+            local log_file="${LOG_DIR}/sync.log"
 
-        local dummy_log_file="${LOG_DIR}/dummytf"
+            if [[ -e "${log_file}" ]]; then
+                mv "${log_file}" "${log_file}.${log_ext}" ||
+                    abort "archiving old slave sync log file ${log_file} failed"
+            fi
 
-        if [[ -e "${dummy_log_file}" ]]; then
-            mv "${dummy_log_file}" "${dummy_log_file}.${log_ext}" ||
-                abort "archiving old dummytf log file ${dummy_log_file} failed"
+            ## Start the sync process.
+
+            set -m
+
+            lsyncd -log all ${SHARED_DIR}/sync/slave-${slave_number}.lua ||
+                abort "starting slave sync ${slave_number} on ip ${ip} failed"
+            status "started slave sync ${slave_number} on ip ${ip}"
         fi
 
-        ## Start the slave and dummy tensorflow processes.
+        if (pgrep -f "^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}" > /dev/null); then
+            status "dummytf already running"
+        else
+            ## Archive the old log file if present.
 
-        set -m
+            local dummy_log_file="${LOG_DIR}/dummytf"
 
-        nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}" > ${dummy_log_file} 2>&1 ||
-            abort "starting dummytf on ip ${ip} failed" &
-        status "started dummytf on ip ${ip} port ${port}"
+            if [[ -e "${dummy_log_file}" ]]; then
+                mv "${dummy_log_file}" "${dummy_log_file}.${log_ext}" ||
+                    abort "archiving old dummytf log file ${dummy_log_file} failed"
+            fi
+
+            ## Start the slave and dummy tensorflow processes.
+
+            set -m
+
+            nohup ${SHARED_DIR}/dummytf.pl "${DATA_DIR}/sync" > ${dummy_log_file} 2>&1 ||
+                abort "starting dummytf on ip ${ip} failed" &
+            status "started dummytf on ip ${ip}"
+        fi
     fi
 }
 
@@ -474,13 +581,24 @@ function start-cluster-slaves { cluster-op "" start-remote-slave $@; }
 ## ----------------------------------------------------------------------------
 
 function stop-slave {
-    local slave_pattern="^java .+ -jar ${SHARED_DIR}/tf"
+    if [[ "${VERSION}" == "1" ]]; then
+        local slave_pattern="^java .+ -jar ${SHARED_DIR}/tf"
 
-    if (pgrep -f "${slave_pattern}" > /dev/null); then
-        pkill -f "${slave_pattern}" || abort "killing slave failed"
-        status "killed slave"
+        if (pgrep -f "${slave_pattern}" > /dev/null); then
+            pkill -f "${slave_pattern}" || abort "killing slave failed"
+            status "killed slave"
+        else
+            status "slave already stopped"
+        fi
     else
-        status "slave already stopped"
+        local slave_pattern="^lsyncd"
+
+        if (pgrep -f "${slave_pattern}" > /dev/null); then
+            pkill -f "${slave_pattern}" || abort "killing slave failed"
+            status "killed slave sync"
+        else
+            status "slave sync already stopped"
+        fi
     fi
 
     local dummy_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
@@ -522,14 +640,17 @@ function stop-cluster-dummytfs { cluster-op "" stop-remote-dummytf $@; }
 ## ----------------------------------------------------------------------------
 
 function start-master {
-    ## Make sure there are no existing slave processes running.
+    ## Make sure the IP address matches the config.
 
-    local pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
+    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
+    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
 
-    if (pgrep -f "${pattern}" > /dev/null); then
-        status "master already running"
-        return
+    if [[ "${ip}" != "" ]] && [[ "${registry_ip}" != "" ]] &&
+           [[ "${ip}" != "${registry_ip}" ]]; then
+        abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
     fi
+
+    local slave_count=$(echo $(wc -l ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d" "))
 
     ## Create the log dir if necessary.
 
@@ -541,41 +662,72 @@ function start-master {
     ## Create the data dir if necessary.
 
     if [ ! -d "${DATA_DIR}" ]; then
-        sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
-        sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
-        sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+        sudo mkdir ${DATA_DIR} || abort "creating data dir failed"
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
 
-    ## Archive the old log file if present.
+    mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+    mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+    mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+    mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
+    mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
+
+    for i in $(seq 1 ${slave_count}); do
+        mkdir -p "${DATA_DIR}/sync/in/${i}" ||
+            abort "creating sync input subdir ${i} failed"
+        mkdir -p "${DATA_DIR}/sync/out/${i}" ||
+            abort "creating sync output subdir ${i} failed"
+    done
+
+    ## Start services.
 
     local log_ext="$(mktemp -u XXXXXX)"
-    local log_file="${LOG_DIR}/master"
 
-    if [[ -e "${log_file}" ]]; then
-        mv "${log_file}" "${log_file}.${log_ext}" ||
-            abort "archiving old master log file ${log_file} failed"
+    if [[ "${VERSION}" == "1" ]]; then
+        if (pgrep -f "^java .+ org.openchai.tensorflow.DirectSubmitter" > /dev/null); then
+            status "master already running"
+        else
+            ## Archive the old log file if present.
+
+            local log_ext="$(mktemp -u XXXXXX)"
+            local log_file="${LOG_DIR}/master"
+
+            if [[ -e "${log_file}" ]]; then
+                mv "${log_file}" "${log_file}.${log_ext}" ||
+                    abort "archiving old master log file ${log_file} failed"
+            fi
+
+            ## Start the master.  Note: can also try -Xmx4096m
+
+            set -m
+
+            export GITDIR=${DIST_DIR}
+            nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
+                abort "starting master on ip ${ip} failed" &
+            status "started master on ip ${ip}"
+        fi
+    else
+        if (pgrep -f "^lsyncd" > /dev/null); then
+            status "master sync already running"
+        else
+            ## Archive the old log file if present.
+
+            local log_file="${LOG_DIR}/sync-log"
+
+            if [[ -e "${log_file}" ]]; then
+                mv "${log_file}" "${log_file}.${log_ext}" ||
+                    abort "archiving old master sync log file ${log_file} failed"
+            fi
+
+            ## Start the sync process.
+
+            set -m
+
+            lsyncd -log all ${SHARED_DIR}/sync/master.lua ||
+                abort "starting master sync on ip ${ip} failed"
+            status "started master sync on ip ${ip}"
+        fi
     fi
-
-    ## Make sure the IP address matches the config.
-    
-    local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
-    local registry_ip=$(echo $(fgrep gpuRegistryHost ${SHARED_DIR}/conf/apps-config.yml | cut -f2 -d:))
-
-    if [[ "${ip}" != "" ]] && [[ "${registry_ip}" != "" ]] &&
-           [[ "${ip}" != "${registry_ip}" ]]; then
-        abort "host ip <${ip}> does not match gpu registry ip <${registry_ip}>"
-    fi
-
-    ## Start the master.
-
-    set -m
-
-    export GITDIR=${DIST_DIR}
-    nohup java -Xmx2048m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
-#    nohup java -Xmx4096m -Dlogger.level=2 -classpath ${DIST_DIR}/tf/target/classes:${DIST_DIR}/tf/libs/* -Djava.net.preferIPv4Stack=true org.openchai.tensorflow.DirectSubmitter ${SHARED_DIR}/conf/submitter.yml > ${log_file} 2>&1 ||
-        abort "starting master on ip ${ip} failed" &
-    status "started master on ip ${ip}"
 }
 
 function start-remote-master { remote-op start-master $1; }
@@ -586,13 +738,24 @@ function start-cluster-masters { cluster-op start-remote-master "" $@; }
 ## ----------------------------------------------------------------------------
 
 function stop-master {
-    local pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
+    if [[ "${VERSION}" == "1" ]]; then
+        local pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
 
-    if (pgrep -f "${pattern}" > /dev/null); then
-        pkill -f "${pattern}" || abort "killing master failed"
-        status "killed master"
+        if (pgrep -f "${pattern}" > /dev/null); then
+            pkill -f "${pattern}" || abort "killing master failed"
+            status "killed master"
+        else
+            status "master already stopped"
+        fi
     else
-        status "master already stopped"
+        local pattern="^lsyncd"
+
+        if (pgrep -f "${pattern}" > /dev/null); then
+            pkill -f "${pattern}" || abort "killing master failed"
+            status "killed master sync"
+        else
+            status "master sync already stopped"
+        fi
     fi
 }
 
@@ -630,21 +793,22 @@ function start-simulator {
     ## Create the data dir if necessary.
 
     if [ ! -d "${DATA_DIR}" ]; then
-        sudo mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
-        sudo mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
-        sudo mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+        sudo mkdir ${DATA_DIR} || abort "creating data dir failed"
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
 
-    ## Archive the old log file if present.
+    mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+    mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+    mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+    mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
+    mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
 
-    local log_ext="$(mktemp -u XXXXXX)"
-    local log_file="${LOG_DIR}/simulate"
-
-    if [[ -e "${log_file}" ]]; then
-        mv "${log_file}" "${log_file}.${log_ext}" ||
-            abort "archiving old simulator log file ${log_file} failed"
-    fi
+    for i in $(seq 1 ${slave_count}); do
+        mkdir -p "${DATA_DIR}/sync/in/${i}" ||
+            abort "creating sync input subdir ${i} failed"
+        mkdir -p "${DATA_DIR}/sync/out/${i}" ||
+            abort "creating sync output subdir ${i} failed"
+    done
 
     ## Make sure the IP address matches the config.
 
@@ -660,10 +824,53 @@ function start-simulator {
 
     set -m
 
-    export GITDIR=${DIST_DIR}
-    nohup ${SHARED_DIR}/simulate.pl "${DATA_DIR}" > ${log_file} 2>&1 ||
-        abort "starting simulator on ip ${ip} failed" &
-    status "started simulator on ip ${ip}"
+    if [[ "${VERSION}" == "1" ]]; then
+        ## Archive the old log file if present.
+
+        local log_ext="$(mktemp -u XXXXXX)"
+        local log_file="${LOG_DIR}/simulate"
+
+        if [[ -e "${log_file}" ]]; then
+            mv "${log_file}" "${log_file}.${log_ext}" ||
+                abort "archiving old simulator log file ${log_file} failed"
+        fi
+
+        ## Start the simulator.
+
+        nohup ${SHARED_DIR}/simulate.pl "${DATA_DIR}" > ${log_file} 2>&1 ||
+            abort "starting simulator on ip ${ip} failed" &
+        status "started simulator on ip ${ip}"
+    else
+        local slave_count=$(echo $(wc -l ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d" "))
+
+        declare -i i delay_ms
+
+        local delay_ms=28
+        local i=0
+
+        while (true); do
+#        for i in $(seq 1 1000); do
+            i=$((i + 1))
+
+            local start_ms=$(date +%s%3N)
+
+            for j in $(seq 1 ${slave_count}); do
+                cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg
+            done
+
+            local finish_ms=$(date +%s%#3N)
+            local duration_ms=$((finish_ms - start_ms))
+            local remaining_ms=$((delay_ms - duration_ms))
+
+            [[ ${remaining_ms} < 0 ]] &&
+                abort "simulate time exceeded by $remaining_ms ms"
+
+            local remaining_s=$(echo $remaining_ms / 1000 | bc -l)
+
+            echo "remaining seconds: $remaining_s"
+            sleep $remaining_s
+        done
+    fi
 }
 
 function start-remote-simulator { remote-op start-simulator $1; }
@@ -844,7 +1051,128 @@ function make-apps-config {
 }
 
 ## ----------------------------------------------------------------------------
-## Create a shared directory (tarball) ready for deployment.
+## Create a master sync config file.
+## ----------------------------------------------------------------------------
+
+declare -i slave_count
+
+function add-master-sync-config-slave {
+    ip=$1
+
+    slave_count=$((${slave_count} + 1))
+
+    echo "   { \"${ip}\", \"${DATA_DIR}/sync/out/${slave_count}\" },"
+}
+
+function make-master-sync-config {
+    ip_file=$1
+    output_file=$2
+
+    [ -e ${output_file} ] && abort "sync config file already exists"
+
+    echo "Making master sync config file" 1>&2
+
+    slave_count=0
+
+    echo "gpus = {" > ${output_file}
+    cluster-op "" add-master-sync-config-slave "${ip_file}" >> ${output_file}
+    echo "}" >> ${output_file}
+
+    cat <<EOF >> ${output_file}
+
+settings {
+   logfile = "${LOG_DIR}/sync.log",
+   statusFile = "${LOG_DIR}/sync.status",
+   maxDelays = 0
+}
+
+for _, v in ipairs(gpus) do
+   server = v[1]
+   origin = v[2]
+   print(server, origin)
+   sync {
+      default.rsync,
+      delete = 'running',
+      source = origin,
+      target = server .. ':' .. "${DATA_DIR}/sync/in/",
+      delay = 0,
+      rsync = {
+         rsh = "/usr/bin/ssh -l mike -i /home/mike/.ssh/id_rsa.sparcle",
+--         temp_dir = "/tmp",
+--         update = true,
+--      _extra = { "--remove-source-files" }
+      }
+   }
+end
+
+EOF
+}
+
+## ----------------------------------------------------------------------------
+## Create multiple slave sync config files.
+## ----------------------------------------------------------------------------
+
+declare master_ip
+
+function get-master-ip { master_ip="$1"; }
+
+declare -i slave_count
+declare slave_sync_config_dir
+
+function make-slave-sync-config {
+    local ip=$1
+
+    slave_count=$((${slave_count} + 1))
+
+    local output_file="${slave_sync_config_dir}/slave-${slave_count}.lua"
+
+    [ -e ${output_file} ] &&
+        abort "slave sync config file ${slave_count} already exists"
+
+    local sync_path="${DATA_DIR}/sync/in/${slave_count}"
+
+    echo "Making slave sync config file ${slave_count}" 1>&2
+
+    cat <<EOF >> ${output_file}
+
+settings {
+   logfile = "${LOG_DIR}/sync.log",
+   statusFile = "${LOG_DIR}/sync.status",
+   maxDelays = 0
+}
+
+ sync {
+    default.rsync,
+    delete = "running",
+    source = "${DATA_DIR}/sync/out",
+    target = "${master_ip}:${DATA_DIR}/sync/in/${slave_count}/",
+    delay = 0,
+    rsync = {
+       rsh = "/usr/bin/ssh -l mike -i /home/mike/.ssh/id_rsa.sparcle",
+       rsync_path = "mkdir -p ${sync_path} && /usr/bin/rsync",
+--       temp_dir = "/tmp",
+--       update = true,
+--      _extra = { "--remove-source-files" }
+    }
+ }
+
+EOF
+}
+
+function make-slave-sync-configs {
+    local ip_file=$1
+
+    cluster-op get-master-ip "" "${ip_file}"
+
+    slave_count=0
+    slave_sync_config_dir=$2
+
+    cluster-op "" make-slave-sync-config "${ip_file}"
+}
+
+## ----------------------------------------------------------------------------
+## Create a shared directory (tarball) ready for deployment.  Note:
+## sync dir and master and slave sync config files are for sparcle2.
 ## ----------------------------------------------------------------------------
 
 function make-shared {
@@ -853,11 +1181,14 @@ function make-shared {
 
     [ "${shared_dir}" == "" ] && abort "shared dir not specified"
 
-    mkdir -p ${shared_dir}/conf || abort "can't make shared directory"
+    mkdir -p ${shared_dir}/conf || abort "can't make shared conf subdirectory"
+    mkdir -p ${shared_dir}/sync || abort "can't make shared sync subdirectory"
 
     make-gpu-slaves ${ip_file} ${shared_dir}/gpu-slaves.txt
     make-apps-config ${ip_file} ${shared_dir}/conf/apps-config.yml
     make-submitter ${ip_file} ${shared_dir}/conf/submitter.yml
+    make-master-sync-config ${ip_file} ${shared_dir}/sync/master.lua
+    make-slave-sync-configs ${ip_file} ${shared_dir}/sync
 
     cp ${OCSPARK}/tf/target/tf-1.0.0.jar ${shared_dir}/ ||
         abort "copy tf.jar failed"
@@ -1080,7 +1411,8 @@ function scrub-data {
     rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
     rm -rf "${DATA_DIR}"/input/completed/* 2> /dev/null || true
     rm "${DATA_DIR}"/tmp/*.* 2> /dev/null || true
-    rm -rf "${DATA_DIR}"/output/* 2> /dev/null || true
+    rm "${DATA_DIR}"/output/*.* 2> /dev/null || true
+    rm -rf "${DATA_DIR}"/sync/* 2> /dev/null || true
 }
 
 function scrub-host-data { remote-op scrub-data "$1"; }
@@ -1112,6 +1444,7 @@ IP_FILE=
 USER_NAME=
 OUTPUT_PATH=
 DEBUG=
+VERSION=1
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -1140,6 +1473,11 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
 
+        -v|--version)
+            VERSION="$2"
+            shift; shift;
+            ;;
+
         *)
             POSITIONAL+=("$1")
             shift
@@ -1155,6 +1493,10 @@ set -- "${POSITIONAL[@]}"
 
 if [[ ! -z ${IP} && ! -z ${IP_FILE} ]]; then
     abort "please specify either remote host or cluster file but not both"
+fi
+
+if [[ "${VERSION}" != "1" && "${VERSION}" != "2" ]]; then
+    abort "version must be 1 or 2"
 fi
 
 ## Parse a command.
