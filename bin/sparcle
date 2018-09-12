@@ -803,13 +803,6 @@ function start-simulator {
     mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
     mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
 
-    for i in $(seq 1 ${slave_count}); do
-        mkdir -p "${DATA_DIR}/sync/in/${i}" ||
-            abort "creating sync input subdir ${i} failed"
-        mkdir -p "${DATA_DIR}/sync/out/${i}" ||
-            abort "creating sync output subdir ${i} failed"
-    done
-
     ## Make sure the IP address matches the config.
 
     local ip=$(echo $(hostname -I | cut -f1 -d" " 2> /dev/null))
@@ -843,32 +836,78 @@ function start-simulator {
     else
         local slave_count=$(echo $(wc -l ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d" "))
 
-        declare -i i delay_ms
+        for i in $(seq 1 ${slave_count}); do
+            mkdir -p "${DATA_DIR}/sync/in/${i}" ||
+                abort "creating sync input subdir ${i} failed"
+            mkdir -p "${DATA_DIR}/sync/out/${i}" ||
+                abort "creating sync output subdir ${i} failed"
+        done
 
-        local delay_ms=28
+        declare -i i period_ms
+
+##        local period_ms=28
+        local period_ms=100
         local i=0
 
-        while (true); do
-#        for i in $(seq 1 1000); do
-            i=$((i + 1))
+#        sudo renice -n -15 $$
+
+        mkdir -p /tmp/fooby
+
+##        for i in $(seq 1 1000); do
+##            for j in $(seq 1 ${slave_count}); do
+##                cp ${SHARED_DIR}/test.jpg /tmp/fooby/test-${i}-${j}.jpg
+##            done
+##        done
+
+##        while (true); do
+##            i=$((i + 1))
+        for i in $(seq 1 1000); do
 
             local start_ms=$(date +%s%3N)
+
+            ## Try symlinks rather than copies (hard links inherit
+            ## source timestamp, so no use for timing) (faster!).
+
+##            for j in $(seq 1 ${slave_count}); do
+##                ln -s ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg
+##            done
+
+            ## Try moving pre-existing copies (even slower!).
+
+##            for j in $(seq 1 ${slave_count}); do
+##                mv /tmp/fooby/test-${i}-${j}.jpg ${DATA_DIR}/sync/out/$j/
+##            done
+
+            ## Try moving pre-existing images (even slower!).
+
+##            TIMEFORMAT="%R"
 
             for j in $(seq 1 ${slave_count}); do
                 cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg
             done
 
-            local finish_ms=$(date +%s%#3N)
+            ## Try copying in the background (no faster).
+
+##            for j in $(seq 1 ${slave_count}); do
+##                cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg &
+##                pids[${j}]=$!
+##            done
+##            for pid in ${pids[*]}; do
+##                wait $pid
+##            done
+
+            local finish_ms=$(date +%s%3N)
             local duration_ms=$((finish_ms - start_ms))
-            local remaining_ms=$((delay_ms - duration_ms))
+            local remaining_ms=$((period_ms - duration_ms))
 
-            [[ ${remaining_ms} < 0 ]] &&
-                abort "simulate time exceeded by $remaining_ms ms"
+            if (( $(echo "${remaining_ms} < 0" | bc -l) )); then
+                echo "duration: ${duration_ms} ms, remaining: $remaining_ms ms (exceeded)"
+            else
+                local remaining_s=$(echo $remaining_ms / 1000 | bc -l)
 
-            local remaining_s=$(echo $remaining_ms / 1000 | bc -l)
-
-            echo "remaining seconds: $remaining_s"
-            sleep $remaining_s
+                echo "duration: ${duration_ms} ms, remaining: ${remaining_ms} ms"
+                sleep $remaining_s
+            fi
         done
     fi
 }
