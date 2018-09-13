@@ -843,71 +843,16 @@ function start-simulator {
                 abort "creating sync output subdir ${i} failed"
         done
 
-        declare -i i period_ms
+        declare -i i
 
-##        local period_ms=28
-        local period_ms=100
         local i=0
+        local period_s=0.027
 
-#        sudo renice -n -15 $$
-
-        mkdir -p /tmp/fooby
-
-##        for i in $(seq 1 1000); do
-##            for j in $(seq 1 ${slave_count}); do
-##                cp ${SHARED_DIR}/test.jpg /tmp/fooby/test-${i}-${j}.jpg
-##            done
-##        done
-
-##        while (true); do
-##            i=$((i + 1))
-        for i in $(seq 1 1000); do
-
-            local start_ms=$(date +%s%3N)
-
-            ## Try symlinks rather than copies (hard links inherit
-            ## source timestamp, so no use for timing) (faster!).
-
-##            for j in $(seq 1 ${slave_count}); do
-##                ln -s ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg
-##            done
-
-            ## Try moving pre-existing copies (even slower!).
-
-##            for j in $(seq 1 ${slave_count}); do
-##                mv /tmp/fooby/test-${i}-${j}.jpg ${DATA_DIR}/sync/out/$j/
-##            done
-
-            ## Try moving pre-existing images (even slower!).
-
-##            TIMEFORMAT="%R"
-
+        while sleep $period_s; do
+            i=$((i + 1))
             for j in $(seq 1 ${slave_count}); do
-                cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg
-            done
-
-            ## Try copying in the background (no faster).
-
-##            for j in $(seq 1 ${slave_count}); do
-##                cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/$j/test-${i}.jpg &
-##                pids[${j}]=$!
-##            done
-##            for pid in ${pids[*]}; do
-##                wait $pid
-##            done
-
-            local finish_ms=$(date +%s%3N)
-            local duration_ms=$((finish_ms - start_ms))
-            local remaining_ms=$((period_ms - duration_ms))
-
-            if (( $(echo "${remaining_ms} < 0" | bc -l) )); then
-                echo "duration: ${duration_ms} ms, remaining: $remaining_ms ms (exceeded)"
-            else
-                local remaining_s=$(echo $remaining_ms / 1000 | bc -l)
-
-                echo "duration: ${duration_ms} ms, remaining: ${remaining_ms} ms"
-                sleep $remaining_s
-            fi
+                ln -s ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/${j}/test-${i}.jpg
+            done &
         done
     fi
 }
