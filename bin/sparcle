@@ -5,8 +5,9 @@ ARCHIVE_DIR=/sparcle-archive
 DIST_DIR=/sparcle-dist
 SHARED_DIR=/shared
 BASE_SLAVE_PORT=61230
-#DATA_DIR=/home/mike/tmp/ocspark
-DATA_DIR=/data
+DATA_DIR_1=/data
+DATA_DIR_1_5=
+DATA_DIR_2=/Sparcle
 APP_NAME=test-local
 GPU_REGISTRY_PORT=60001
 DEBUG=1
@@ -62,11 +63,11 @@ function remote-op {
 
     if [ "${user}" != "" ]; then
         ssh ${user}@${remote_host}\
-            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; VERSION=${VERSION}; ${callback}" ||
             abort "remote command failed"
     else
         ssh ${remote_host}\
-            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; ${callback}" ||
+            -t "$(declare -f status abort ${callback}); USER=${USER}; ARCHIVE_DIR=${ARCHIVE_DIR}; LOG_DIR=${LOG_DIR}; DIST_DIR=${DIST_DIR}; SHARED_DIR=${SHARED_DIR}; DATA_DIR=${DATA_DIR}; VERSION=${VERSION}; ${callback}" ||
             abort "remote command failed"
     fi
 }
@@ -114,7 +115,11 @@ function cluster-op {
             ## need to make sure that all the slaves are fully up
             ## before the master starts.
 
-            [[ "${VERSION}" == "1" ]] && sleep 5
+            if [[ "${VERSION}" == "1" ]]; then
+                sleep 5
+            elif [[ "${VERSION}" == "1.5" ]]; then
+                sleep 1
+            fi
 
             [ "${master_callback}" != "" ] && ${master_callback} ${ip} "$@"
         else
@@ -300,6 +305,26 @@ function setup {
              make -j4
              sudo make install)
     fi
+
+    ## Create a password-free sudoable wrapper around odi.py.
+
+##     sudo cat > /etc/sudoers.d/odi <<EOF
+## %admin ALL=(ALL:ALL) NOPASSWD: /usr/local/sbin/odi.sh
+##  
+## EOF
+##     sudo cat > /usr/local/sbin/odi.sh <<EOF
+## #!/bin/bash
+## 
+## cd /home/mike/realtime_object_detection && ./odi.py
+## 
+## EOF
+## 
+##     sudo chmod root:root /usr/local/sbin/odi.sh
+##     sudo chown go-rwx /usr/local/sbin/odi.sh
+
+    ## Better: just add your own user to the video group (edit
+    ## /etc/group and append your username to the line that defines
+    ## the group 'video').
 }
 
 function setup-host { remote-op setup $1; }
@@ -468,22 +493,20 @@ function start-slave {
 
     ## Create the data dir if necessary.
 
-    if [ ! -d "${DATA_DIR}" ]; then
+    if [[ "${DATA_DIR}" != "" && ! -d "${DATA_DIR}" ]]; then
         sudo mkdir ${DATA_DIR} || abort "creating data dir failed"
-        sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
+        sudo chmod -R a+rwxs "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
-
-    mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
-    mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
-    mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
-    mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
-    mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
 
     ## Make sure there are no existing slave processes running.
 
     local log_ext="$(mktemp -u XXXXXX)"
 
     if [[ "${VERSION}" == "1" ]]; then
+        mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+        mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+        mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+
         if (pgrep -f "^java .+ -jar ${SHARED_DIR}/tf" > /dev/null); then
             status "slave already running"
         else
@@ -496,7 +519,7 @@ function start-slave {
                     abort "archiving old slave log file ${log_file} failed"
             fi
 
-            ## Start the slave and dummy tensorflow processes.
+            ## Start the slave process.
 
             set -m
 
@@ -525,7 +548,63 @@ function start-slave {
                 abort "starting dummytf on ip ${ip} failed" &
             status "started dummytf on ip ${ip}"
         fi
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        mkdir -p "${DATA_DIR}/ingress" || abort "creating sync input dir failed"
+        mkdir -p "${DATA_DIR}/egress" || abort "creating sync output dir failed"
+
+        if (pgrep -f "^python2 ./odi.py" > /dev/null); then
+            status "odi.py already running"
+        else
+            ## Archive the old log file if present.
+
+            local tf_log_file="${LOG_DIR}/odi"
+
+            if [[ -e "${tf_log_file}" ]]; then
+                mv "${tf_log_file}" "${tf_log_file}.${log_ext}" ||
+                    abort "archiving old odi.py log file ${tf_log_file} failed"
+            fi
+
+            ## Start the tensorflow processes.
+
+            set -m
+
+            cd ${SHARED_DIR}/realtime_object_detection
+            nohup ./odi.py > ${tf_log_file} 2>&1 ||
+                abort "starting odi.py on ip ${ip} failed" &
+            status "started odi.py on ip ${ip}"
+
+            sleep 180   ## should really find a way to wait until service is fully up.
+        fi
+
+        if (pgrep -f "^python sparcle-client.py" > /dev/null); then
+            status "sparcle 1.5 slave already running"
+        else
+            ## Archive the old log file if present.
+
+            local log_file="${LOG_DIR}/sparcle-1.5.log"
+
+            if [[ -e "${log_file}" ]]; then
+                mv "${log_file}" "${log_file}.${log_ext}" ||
+                    abort "archiving old sparcle 1.5 slave log file ${log_file} failed"
+            fi
+
+            ## Start the sparcle 1.5 client.
+
+            local offset_slave_number=$((${slave_number} - 1))
+            set -m
+
+            rm ${DATA_DIR}/egress/sparcle-client.py 2> /dev/null || true
+            cp ${SHARED_DIR}/sparcle-client.py ${DATA_DIR}/egress/ ||
+                abort "copying sparcle 1.5 client to egress dir failed"
+            cd ${DATA_DIR}/egress
+            python sparcle-client.py ${offset_slave_number} > ${log_file} 2>&1 ||
+                abort "starting sparcle 1.5 slave ${slave_number} on ip ${ip} failed" &
+            status "started sparcle 1.5 slave ${slave_number} on ip ${ip}"
+        fi
     else
+        mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
+        mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
+
         if (pgrep -f "^lsyncd" > /dev/null); then
             status "slave sync already running"
         else
@@ -559,7 +638,7 @@ function start-slave {
                     abort "archiving old dummytf log file ${dummy_log_file} failed"
             fi
 
-            ## Start the slave and dummy tensorflow processes.
+            ## Start the dummy tensorflow processes.
 
             set -m
 
@@ -581,33 +660,32 @@ function start-cluster-slaves { cluster-op "" start-remote-slave $@; }
 ## ----------------------------------------------------------------------------
 
 function stop-slave {
+    local slave_pattern
+    local tensorflow_pattern
+
     if [[ "${VERSION}" == "1" ]]; then
-        local slave_pattern="^java .+ -jar ${SHARED_DIR}/tf"
-
-        if (pgrep -f "${slave_pattern}" > /dev/null); then
-            pkill -f "${slave_pattern}" || abort "killing slave failed"
-            status "killed slave"
-        else
-            status "slave already stopped"
-        fi
+        slave_pattern="^java .+ -jar ${SHARED_DIR}/tf"
+        tensorflow_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        slave_pattern="^python sparcle-client.py"
+        tensorflow_pattern="^python2 ./odi.py"
     else
-        local slave_pattern="^lsyncd"
-
-        if (pgrep -f "${slave_pattern}" > /dev/null); then
-            pkill -f "${slave_pattern}" || abort "killing slave failed"
-            status "killed slave sync"
-        else
-            status "slave sync already stopped"
-        fi
+        slave_pattern="^lsyncd"
+        tensorflow_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
     fi
 
-    local dummy_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
-
-    if (pgrep -f "${dummy_pattern}" > /dev/null); then
-        pkill -f "${dummy_pattern}" || abort "killing dummytf failed"
-        status "killed dummytf"
+    if (pgrep -f "${slave_pattern}" > /dev/null); then
+        pkill -f "${slave_pattern}" || abort "stopping slave failed"
+        status "stopped slave"
     else
-        status "dummytf already stopped"
+        status "slave already stopped"
+    fi
+
+    if (pgrep -f "${tensorflow_pattern}" > /dev/null); then
+        pkill -f "${tensorflow_pattern}" || abort "stopping tensorflow failed"
+        status "stopped tensorflow"
+    else
+        status "tensorflow already stopped"
     fi
 }
 
@@ -621,19 +699,27 @@ function stop-cluster-slaves { cluster-op "" stop-remote-slave $@; }
 ## error condition.
 ## ----------------------------------------------------------------------------
 
-function stop-dummytf {
-    local dummy_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
+function stop-tensorflow {
+    local tensorflow_pattern
 
-    if (pgrep -f "${dummy_pattern}" > /dev/null); then
-        pkill -f "${dummy_pattern}" || abort "killing dummytf failed"
-        status "killed dummytf"
+    if [[ "${VERSION}" == "1" ]]; then
+        tensorflow_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        tensorflow_pattern="^python2 ./odi.py"
     else
-        status "dummytf already stopped"
+        tensorflow_pattern="^/usr/bin/perl /shared/dummytf.pl ${DATA_DIR}"
+    fi
+
+    if (pgrep -f "${tensorflow_pattern}" > /dev/null); then
+        pkill -f "${tensorflow_pattern}" || abort "stopping tensorflow failed"
+        status "stopped tensorflow"
+    else
+        status "tensorflow already stopped"
     fi
 }
 
-function stop-remote-dummytf { remote-op stop-dummytf $1; }
-function stop-cluster-dummytfs { cluster-op "" stop-remote-dummytf $@; }
+function stop-remote-tensorflow { remote-op stop-tensorflow $1; }
+function stop-cluster-tensorflows { cluster-op "" stop-remote-tensorflow $@; }
 
 ## ----------------------------------------------------------------------------
 ## Start a master (eg. on x-gene or i3).
@@ -661,29 +747,20 @@ function start-master {
 
     ## Create the data dir if necessary.
 
-    if [ ! -d "${DATA_DIR}" ]; then
+    if [[ "${DATA_DIR}" != "" && ! -d "${DATA_DIR}" ]]; then
         sudo mkdir ${DATA_DIR} || abort "creating data dir failed"
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
-
-    mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
-    mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
-    mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
-    mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
-    mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
-
-    for i in $(seq 1 ${slave_count}); do
-        mkdir -p "${DATA_DIR}/sync/in/${i}" ||
-            abort "creating sync input subdir ${i} failed"
-        mkdir -p "${DATA_DIR}/sync/out/${i}" ||
-            abort "creating sync output subdir ${i} failed"
-    done
 
     ## Start services.
 
     local log_ext="$(mktemp -u XXXXXX)"
 
     if [[ "${VERSION}" == "1" ]]; then
+        mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+        mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+        mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+
         if (pgrep -f "^java .+ org.openchai.tensorflow.DirectSubmitter" > /dev/null); then
             status "master already running"
         else
@@ -706,13 +783,57 @@ function start-master {
                 abort "starting master on ip ${ip} failed" &
             status "started master on ip ${ip}"
         fi
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        for i in $(seq 1 ${slave_count}); do
+            mkdir -p "${DATA_DIR}/ingress/${i}" ||
+                abort "creating sparcle 1.5 master input subdir ${i} failed"
+            mkdir -p "${DATA_DIR}/egress/${i}" ||
+                abort "creating sparcle 1.5 master output subdir ${i} failed"
+        done
+
+        if (pgrep -f "^python sparcle-server.py" > /dev/null); then
+            status "sparcle 1.5 master already running"
+        else
+            ## Archive the old log file if present.
+
+            local log_file="${LOG_DIR}/sparcle-1.5-master.log"
+
+            if [[ -e "${log_file}" ]]; then
+                mv "${log_file}" "${log_file}.${log_ext}" ||
+                    abort "archiving old sparcle 1.5 master log file ${log_file} failed"
+            fi
+
+            ## Start the sync process.
+
+            local slave_count=$(echo $(wc -l ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d" "))
+            local offset_slave_count=$((${slave_count} - 1))
+            
+            for j in $(seq 0 ${offset_slave_count}); do
+                cp ${SHARED_DIR}/realtime_object_detection/test_images/images/*.jpg\
+                   ${DATA_DIR}/egress/${j}/
+            done
+
+            set -m
+
+            cd ${SHARED_DIR}
+            python sparcle-server.py --server > ${log_file} 2>&1 ||
+                abort "starting sparcle 1.5 master on ip ${ip} failed" &
+            status "started sparcle 1.5 master on ip ${ip}"
+        fi
     else
+        for i in $(seq 1 ${slave_count}); do
+            mkdir -p "${DATA_DIR}/sync/in/${i}" ||
+                abort "creating sync input subdir ${i} failed"
+            mkdir -p "${DATA_DIR}/sync/out/${i}" ||
+                abort "creating sync output subdir ${i} failed"
+        done
+
         if (pgrep -f "^lsyncd" > /dev/null); then
             status "master sync already running"
         else
             ## Archive the old log file if present.
 
-            local log_file="${LOG_DIR}/sync-log"
+            local log_file="${LOG_DIR}/sync.log"
 
             if [[ -e "${log_file}" ]]; then
                 mv "${log_file}" "${log_file}.${log_ext}" ||
@@ -738,24 +859,21 @@ function start-cluster-masters { cluster-op start-remote-master "" $@; }
 ## ----------------------------------------------------------------------------
 
 function stop-master {
+    local pattern
+
     if [[ "${VERSION}" == "1" ]]; then
-        local pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
-
-        if (pgrep -f "${pattern}" > /dev/null); then
-            pkill -f "${pattern}" || abort "killing master failed"
-            status "killed master"
-        else
-            status "master already stopped"
-        fi
+        pattern="^java .+ org.openchai.tensorflow.DirectSubmitter"
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        pattern="^python sparcle-server.py --server"
     else
-        local pattern="^lsyncd"
+        pattern="^lsyncd"
+    fi
 
-        if (pgrep -f "${pattern}" > /dev/null); then
-            pkill -f "${pattern}" || abort "killing master failed"
-            status "killed master sync"
-        else
-            status "master sync already stopped"
-        fi
+    if (pgrep -f "${pattern}" > /dev/null); then
+        pkill -f "${pattern}" || abort "stopping master failed"
+        status "stopped master"
+    else
+        status "master already stopped"
     fi
 }
 
@@ -792,16 +910,10 @@ function start-simulator {
 
     ## Create the data dir if necessary.
 
-    if [ ! -d "${DATA_DIR}" ]; then
+    if [[ "${DATA_DIR}" != "" && ! -d "${DATA_DIR}" ]]; then
         sudo mkdir ${DATA_DIR} || abort "creating data dir failed"
         sudo chmod -R a+rwx "${DATA_DIR}" || abort "setting data dir permissions failed"
     fi
-
-    mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
-    mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
-    mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
-    mkdir -p "${DATA_DIR}/sync/in" || abort "creating sync input dir failed"
-    mkdir -p "${DATA_DIR}/sync/out" || abort "creating sync output dir failed"
 
     ## Make sure the IP address matches the config.
 
@@ -818,6 +930,10 @@ function start-simulator {
     set -m
 
     if [[ "${VERSION}" == "1" ]]; then
+        mkdir -p "${DATA_DIR}/input" || abort "creating input dir failed"
+        mkdir -p "${DATA_DIR}/output" || abort "creating output dir failed"
+        mkdir -p "${DATA_DIR}/tmp" || abort "creating tmp dir failed"
+
         ## Archive the old log file if present.
 
         local log_ext="$(mktemp -u XXXXXX)"
@@ -833,6 +949,29 @@ function start-simulator {
         nohup ${SHARED_DIR}/simulate.pl "${DATA_DIR}" > ${log_file} 2>&1 ||
             abort "starting simulator on ip ${ip} failed" &
         status "started simulator on ip ${ip}"
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        local slave_count=$(echo $(wc -l ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d" "))
+        local offset_slave_count=$((${slave_count} - 1))
+
+        for i in $(seq 0 ${max_slave}); do
+            mkdir -p "${DATA_DIR}/ingress/${i}" ||
+                abort "creating sync input subdir ${i} failed"
+            mkdir -p "${DATA_DIR}/egress/${i}" ||
+                abort "creating sync output subdir ${i} failed"
+        done
+
+        declare -i i
+
+        local i=0
+#        local period_s=1
+        local period_s=0.027
+
+        while sleep $period_s; do
+            i=$((i + 1))
+            for j in $(seq 0 ${offset_slave_count}); do
+                cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/egress/${j}/test-${i}.jpg
+            done &
+        done
     else
         local slave_count=$(echo $(wc -l ${SHARED_DIR}/gpu-slaves.txt | cut -f1 -d" "))
 
@@ -846,12 +985,13 @@ function start-simulator {
         declare -i i
 
         local i=0
+#        local period_s=1
         local period_s=0.027
 
         while sleep $period_s; do
             i=$((i + 1))
             for j in $(seq 1 ${slave_count}); do
-                ln -s ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/${j}/test-${i}.jpg
+                cp ${SHARED_DIR}/test.jpg ${DATA_DIR}/sync/out/${j}/test-${i}.jpg
             done &
         done
     fi
@@ -1078,13 +1218,13 @@ for _, v in ipairs(gpus) do
       default.rsync,
       delete = 'running',
       source = origin,
-      target = server .. ':' .. "${DATA_DIR}/sync/in/",
+      target = server .. ':' .. "${DATA_DIR}/ingress/",
       delay = 0,
       rsync = {
          rsh = "/usr/bin/ssh -l mike -i /home/mike/.ssh/id_rsa.sparcle",
 --         temp_dir = "/tmp",
 --         update = true,
---      _extra = { "--remove-source-files" }
+--         _extra = { "--remove-source-files" }
       }
    }
 end
@@ -1128,7 +1268,7 @@ settings {
  sync {
     default.rsync,
     delete = "running",
-    source = "${DATA_DIR}/sync/out",
+    source = "${DATA_DIR}/egress",
     target = "${master_ip}:${DATA_DIR}/sync/in/${slave_count}/",
     delay = 0,
     rsync = {
@@ -1136,7 +1276,7 @@ settings {
        rsync_path = "mkdir -p ${sync_path} && /usr/bin/rsync",
 --       temp_dir = "/tmp",
 --       update = true,
---      _extra = { "--remove-source-files" }
+--       _extra = { "--remove-source-files" }
     }
  }
 
@@ -1186,6 +1326,12 @@ function make-shared {
         abort "copy simulate.pl failed"
     cp ${OCSPARK}/newapp/test.jpg ${shared_dir}/ ||
         abort "copy test.jpg failed"
+    cp ${OCSPARK}/sparcle-1.5-latest/sparcle-client.py ${shared_dir}/ ||
+        abort "copy sparcle 1.5 client failed"
+    cp ${OCSPARK}/sparcle-1.5-latest/sparcle-server.py ${shared_dir}/ ||
+        abort "copy sparcle 1.5 server failed"
+    cp -r ${OCSPARK}/realtime_object_detection ${shared_dir}/ ||
+        abort "copy odi failed"
 
     mkdir ${shared_dir}/pointr
 
@@ -1326,19 +1472,34 @@ function fetch-data-from-master {
 
     mkdir -p ${analysis_dir} || abort "make local data dir failed"
 
-    local stat_file="$(mktemp -u /tmp/output.XXXXXX)"
+    if [[ "${VERSION}" == "1" ]]; then
+        local stat_file="$(mktemp -u /tmp/output.XXXXXX)"
 
-    ssh ${ip} "cd ${DATA_DIR}/output && stat -c '%y %n' *.jpg.result > ${stat_file}" ||
-        abort "gathering output stats failed"
+        ssh ${ip} "cd ${DATA_DIR}/output && stat -c '%y %n' *.jpg.result > ${stat_file}" ||
+            abort "gathering output stats failed"
 
-    scp ${ip}:${stat_file} ${analysis_dir}/output.stat ||
-        abort "copying output stats failed"
+        scp ${ip}:${stat_file} ${analysis_dir}/output.stat ||
+            abort "copying output stats failed"
 
-    ssh ${ip} "cd ${DATA_DIR} && tar -cz output/*.result" |
-        (cd ${analysis_dir} && tar -xz) || abort "copying output results failed"
+        ssh ${ip} "cd ${DATA_DIR} && tar -cz output/*.result" |
+            (cd ${analysis_dir} && tar -xz) || abort "copying output results failed"
 
-    scp ${ip}:${LOG_DIR}/simulate ${analysis_dir}/ ||
-        abort "copying simulator log failed"
+        scp ${ip}:${LOG_DIR}/simulate ${analysis_dir}/ ||
+            abort "copying simulator log failed"
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        echo "put something here"
+    else
+        local stat_file="$(mktemp -u /tmp/stats.XXXXXX)"
+
+        ssh ${ip} "cd ${DATA_DIR}/sync && find . -type f -print0 | xargs -0 stat -c '%y %n' > ${stat_file}" ||
+            abort "gathering stats failed"
+
+        scp ${ip}:${stat_file} ${analysis_dir}/stats ||
+            abort "copying stats failed"
+
+        scp ${ip}:${LOG_DIR}/simulate ${analysis_dir}/ ||
+            abort "copying simulator log failed"
+    fi
 }
 
 function fetch-data-from-cluster {
@@ -1391,12 +1552,24 @@ function scrub-data {
         return
     fi
 
-    rm "${DATA_DIR}"/input/*.* 2> /dev/null || true
-    rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
-    rm -rf "${DATA_DIR}"/input/completed/* 2> /dev/null || true
-    rm "${DATA_DIR}"/tmp/*.* 2> /dev/null || true
-    rm "${DATA_DIR}"/output/*.* 2> /dev/null || true
-    rm -rf "${DATA_DIR}"/sync/* 2> /dev/null || true
+    if [[ "${VERSION}" == "1" ]]; then
+        rm "${DATA_DIR}"/input/*.* 2> /dev/null || true
+        rm "${DATA_DIR}"/input/processing/*.* 2> /dev/null || true
+        rm -rf "${DATA_DIR}"/input/completed/* 2> /dev/null || true
+        rm "${DATA_DIR}"/tmp/*.* 2> /dev/null || true
+        rm "${DATA_DIR}"/output/*.* 2> /dev/null || true
+    elif [[ "${VERSION}" == "1.5" ]]; then
+        rm "${DATA_DIR}"/ingress/*.* 2> /dev/null || true
+        rm "${DATA_DIR}"/egress/*.* 2> /dev/null || true
+        rm "${DATA_DIR}"/ingress/*/*.* 2> /dev/null || true
+        rm "${DATA_DIR}"/egress/*/*.* 2> /dev/null || true
+    else
+        rm "${DATA_DIR}"/input/*.* 2> /dev/null || true
+        rm "${DATA_DIR}"/output/*.* 2> /dev/null || true
+        rm -rf "${DATA_DIR}"/sync/* 2> /dev/null || true
+        rm "${DATA_DIR}"/ingress/* 2> /dev/null || true
+        rm "${DATA_DIR}"/egress/* 2> /dev/null || true
+    fi
 }
 
 function scrub-host-data { remote-op scrub-data "$1"; }
@@ -1459,7 +1632,7 @@ while [[ $# -gt 0 ]]; do
 
         -v|--version)
             VERSION="$2"
-            shift; shift;
+            shift; shift
             ;;
 
         *)
@@ -1479,8 +1652,16 @@ if [[ ! -z ${IP} && ! -z ${IP_FILE} ]]; then
     abort "please specify either remote host or cluster file but not both"
 fi
 
-if [[ "${VERSION}" != "1" && "${VERSION}" != "2" ]]; then
-    abort "version must be 1 or 2"
+if [[ "${VERSION}" != "1" && "${VERSION}" != "1.5" && "${VERSION}" != "2" ]]; then
+    abort "version must be 1, 1.5 or 2"
+fi
+
+if [[ "${VERSION}" == "1" ]]; then
+    DATA_DIR=${DATA_DIR_1}
+elif [[ "${VERSION}" == "1.5" ]]; then
+    DATA_DIR=${DATA_DIR_1_5}
+else
+    DATA_DIR=${DATA_DIR_2}
 fi
 
 ## Parse a command.
@@ -1708,14 +1889,14 @@ function do-command {
             fi
             ;;
 
-        stop-dummytf)
-            echo "Stopping dummytf(s)..."
+        stop-tensorflow)
+            echo "Stopping tensorflow(s)..."
             if [ "$IP_FILE" != "" ]; then
-                stop-cluster-dummytfs "${IP_FILE}"
+                stop-cluster-tensorflows "${IP_FILE}"
             elif [ "$IP" != "" ]; then
-                stop-remote-dummytf "${IP}"
+                stop-remote-tensorflow "${IP}"
             else
-                stop-dummytf
+                stop-tensorflow
             fi
             ;;
 
