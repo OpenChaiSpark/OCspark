@@ -43,7 +43,7 @@ package object rpc {
     } catch {
       case e: Exception =>
         error(s"Failed getLocalHostname", e)
-        "GpuController"
+        "localhost"
     }
   }
 
