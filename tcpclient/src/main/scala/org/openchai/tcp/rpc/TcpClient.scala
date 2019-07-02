@@ -71,7 +71,7 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
     do {
       val nread = is.read(buf, totalRead, buf.length - totalRead)
       totalRead += nread
-      debug(s"in loop: nread=$nread totalRead=$totalRead bytesToRead=$bytesToRead")
+      debug(s"${getClass.getSimpleName}: in loop: nread=$nread totalRead=$totalRead bytesToRead=$bytesToRead")
       Thread.sleep(20)
     } while (totalRead < bytesToRead)
     //      }

@@ -110,7 +110,7 @@ case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pSer
       do {
         val nread = dis.read(buf, totalRead, buf.length - totalRead)
         totalRead += nread
-        debug(s"in loop: nread=$nread totalRead=$totalRead bytesToRead=$bytesToRead")
+        debug(s"${getClass.getSimpleName}: in loop: nread=$nread totalRead=$totalRead bytesToRead=$bytesToRead")
         nEmpty = 0
         Thread.sleep(20)
       } while (totalRead < bytesToRead)
@@ -132,7 +132,7 @@ case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pSer
       } else {
         nEmpty += 1
       }
-      debug(s"outer outer: $nEmpty")
+//      debug(s"outer outer: $nEmpty")
     } while (nEmpty <= nWaitCycles)
     info(s"Killing thread")
   }

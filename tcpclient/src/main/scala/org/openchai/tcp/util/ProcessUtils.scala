@@ -6,7 +6,7 @@ case class ExecResult(params: ExecParams, elapsed: Long, rc: Int, stdout: String
 case class ExecParams(tag: String, process: String, args: Option[Seq[String]] = None,
   env: Option[Seq[String]] = None, dir: String = ".") {
 
-  override def toString: String = process + "ª " + args.flatMap(arr => Some(arr.mkString(" "," ",""))).getOrElse("")
+  override def toString: String = process + " " + args.flatMap(arr => Some(arr.mkString(" "," ",""))).getOrElse("")
 
 }
 
