@@ -18,9 +18,9 @@ package org.openchai.caffeonspark
 
 import java.util.concurrent.ArrayBlockingQueue
 
-import org.openchai.tcp.rpc.TcpParams
-import org.openchai.tcp.util.TcpCommon
-import org.openchai.tcp.xfer.XferConClient
+import com.pointr.tcp.rpc.TcpParams
+import com.pointr.tcp.util.TcpCommon
+import com.pointr.tcp.xfer.XferConClient
 import org.scalatest.FlatSpec
 import CaosTest._
 
@@ -36,7 +36,7 @@ import CaosTest._
 //}
 //object XferQClientTest {
 //
-//  import org.openchai.tcp.xfer.XferConCommon._
+//  import com.pointr.tcp.xfer.XferConCommon._
 //  val cont = testControllers
 //  val DefaultQTestParams = CQTestParams("local", cont.conHost, cont.conPort, cont.dataHost, cont.dataPort)
 //

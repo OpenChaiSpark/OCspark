@@ -1,8 +1,8 @@
 package org.openchai.tensorflow
 
-import org.openchai.tcp.rpc
-import org.openchai.tcp.rpc._
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.rpc
+import com.pointr.tcp.rpc._
+import com.pointr.tcp.util.Logger._
 
 object GpuRegistry {
 

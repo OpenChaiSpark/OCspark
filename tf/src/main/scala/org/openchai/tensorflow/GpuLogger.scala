@@ -1,12 +1,12 @@
 package org.openchai.tensorflow
 
-import org.openchai.tcp.util.Logger
+import com.pointr.tcp.util.Logger
 
 object GpuLogger {
 
   def bashColors = Array(92, 91, 94, 95, 96, 32, 33, 35, 36, 97, 37, 93)
 
-  import org.openchai.tcp.util.Logger._
+  import com.pointr.tcp.util.Logger._
 
   def txDebug(tx1: Int, msg: String) = {
     def debug(msg: Any) = if (LogLevel >= 3) println(s"$msg")

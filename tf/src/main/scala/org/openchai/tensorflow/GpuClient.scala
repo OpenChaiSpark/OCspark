@@ -4,8 +4,8 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
-import org.openchai.tcp.util.Logger.{debug, error, info, warn}
-import org.openchai.tcp.util.{FileUtils, Logger}
+import com.pointr.tcp.util.Logger.{debug, error, info, warn}
+import com.pointr.tcp.util.{FileUtils, Logger}
 import org.openchai.tensorflow.GpuClient.GpuClientInfo
 import org.openchai.tensorflow.DirectSubmitter.ThreadResult
 import org.openchai.util.TfAppConfig

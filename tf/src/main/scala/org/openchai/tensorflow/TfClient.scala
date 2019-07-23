@@ -2,11 +2,11 @@ package org.openchai.tensorflow
 
 import java.net.SocketException
 
-import org.openchai.tcp.rpc._
-import org.openchai.tcp.util.Logger._
-import org.openchai.tcp.util.{ExecResult, FileUtils, TcpCommon}
-import org.openchai.tcp.xfer.XferConCommon._
-import org.openchai.tcp.xfer._
+import com.pointr.tcp.rpc._
+import com.pointr.tcp.util.Logger._
+import com.pointr.tcp.util.{ExecResult, FileUtils, TcpCommon}
+import com.pointr.tcp.xfer.XferConCommon._
+import com.pointr.tcp.xfer._
 import org.openchai.tensorflow.DmaXferConClient.DmaXferControllers
 import org.openchai.tensorflow.api.Logger
 import org.openchai.util.{TfAppConfig, TfConfig}

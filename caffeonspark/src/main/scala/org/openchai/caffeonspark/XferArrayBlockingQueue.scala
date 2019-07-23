@@ -1,6 +1,6 @@
 package org.openchai.caffeonspark
 
-import org.openchai.tcp.xfer.{XferConClient, XferConCommon, XferQClient}
+import com.pointr.tcp.xfer.{XferConClient, XferConCommon, XferQClient}
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

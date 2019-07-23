@@ -1,7 +1,7 @@
 package org.openchai.tensorflow.web
 
 import org.openchai.util.YamlStruct
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.util.Logger._
 
 object RestClient {
   def main(args: Array[String]): Unit = {

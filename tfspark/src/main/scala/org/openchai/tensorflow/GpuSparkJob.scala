@@ -3,9 +3,9 @@ package org.openchai.tensorflow
 import java.util.concurrent.{Callable, Executors, TimeUnit, TimeoutException}
 
 import org.apache.spark.sql.SparkSession
-import org.openchai.tcp.util.FileUtils.{fileExt, fileName, writeBytes}
-import org.openchai.tcp.util.Logger.{error, info}
-import org.openchai.tcp.util.{ExecResult, TcpUtils}
+import com.pointr.tcp.util.FileUtils.{fileExt, fileName, writeBytes}
+import com.pointr.tcp.util.Logger.{error, info}
+import com.pointr.tcp.util.{ExecResult, TcpUtils}
 import org.openchai.tensorflow.GpuClient.{GpuClientInfo, ImgInfo}
 import org.openchai.tensorflow.GpuLogger.{txDebug, txInfo}
 import org.openchai.tensorflow.DirectSubmitter.ThreadResult

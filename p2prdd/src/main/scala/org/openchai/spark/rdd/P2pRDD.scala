@@ -19,9 +19,9 @@ package org.openchai.spark.rdd
 import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}
-import org.openchai.tcp.rpc.SolverIf.{DefaultHyperParams, DefaultModel, ModelParams}
-import org.openchai.tcp.rpc._
-import org.openchai.tcp.rpc.ServerIf
+import com.pointr.tcp.rpc.SolverIf.{DefaultHyperParams, DefaultModel, ModelParams}
+import com.pointr.tcp.rpc._
+import com.pointr.tcp.rpc.ServerIf
 
 import scala.reflect.ClassTag
 

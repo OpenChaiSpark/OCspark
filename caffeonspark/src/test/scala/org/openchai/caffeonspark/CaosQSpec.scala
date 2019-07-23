@@ -18,9 +18,9 @@ package org.openchai.caffeonspark
 
 import java.util.concurrent.ArrayBlockingQueue
 
-import org.openchai.tcp.rpc.TcpParams
-import org.openchai.tcp.util.TcpCommon
-import org.openchai.tcp.xfer.{TaggedEntry, TypedEntry, XferConClient, XferQClient}
+import com.pointr.tcp.rpc.TcpParams
+import com.pointr.tcp.util.TcpCommon
+import com.pointr.tcp.xfer.{TaggedEntry, TypedEntry, XferConClient, XferQClient}
 import org.scalatest.FlatSpec
 
 case class CQTestParams(master: String, cHost: String, cPort: Int, sHost: String, sPort: Int)
@@ -50,7 +50,7 @@ class CaosQTest(params: CQTestParams = DefaultQTestParams) extends FlatSpec {
 
 object CaosTest {
 
-  import org.openchai.tcp.xfer.XferConCommon._
+  import com.pointr.tcp.xfer.XferConCommon._
   val cont = TestControllers
   val DefaultQTestParams = CQTestParams("local", cont.conHost, cont.conPort, cont.dataHost, cont.dataPort)
 

@@ -3,10 +3,10 @@ package org.openchai.caffeonspark
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 
-import org.openchai.tcp.rpc._
-import org.openchai.tcp.util.{FileUtils, TcpCommon}
-import org.openchai.tcp.util.Logger._
-import org.openchai.tcp.xfer._
+import com.pointr.tcp.rpc._
+import com.pointr.tcp.util.{FileUtils, TcpCommon}
+import com.pointr.tcp.util.Logger._
+import com.pointr.tcp.xfer._
 
 // The main thing we need to override here is using XferQConServerIf inside the server object
 class CaosServer(val outQ: BlockingQueue[TaggedEntry], val qTcpParams: TcpParams,

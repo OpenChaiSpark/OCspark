@@ -1,7 +1,7 @@
 package org.openchai.tensorflow
 
-import org.openchai.tcp.rpc.TcpParams
-import org.openchai.tcp.xfer._
+import com.pointr.tcp.rpc.TcpParams
+import com.pointr.tcp.xfer._
 import org.openchai.tensorflow.api.PcieDMAClient
 import org.openchai.tensorflow.api.Logger._
 

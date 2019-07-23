@@ -33,53 +33,53 @@ Sample Output from <b>TFClientTest</b>
   Debug: Listening for messages..
   LabelImg..
   PrepareWrite ..
-  unpacked org.openchai.tcp.xfer.PrepWriteReq
+  unpacked com.pointr.tcp.xfer.PrepWriteReq
   Debug: Message received: PrepWriteReq(TcpXferConfig(blah,/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg))
   Prepping the Datawrite config=TcpXferConfig(blah,/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg)
   Debug: Sending response:  PrepResp(PrepRespStruct(0,0,blah))
   Info: request: received 377 bytes
-  unpacked org.openchai.tcp.xfer.PrepResp
+  unpacked com.pointr.tcp.xfer.PrepResp
   PrepareWrite response: PrepResp(PrepRespStruct(0,0,blah))
   Debug: XferIf: Sending request: XferWriteParams: config=TcpXferConfig(blah,/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg) datalen=111821} md5len=16}
-  unpacked org.openchai.tcp.xfer.XferWriteReq
+  unpacked com.pointr.tcp.xfer.XferWriteReq
   Debug: Message received: XferWriteReq(XferWriteParams: config=TcpXferConfig(blah,/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg) datalen=111821} md5len=16})
   XferWriteReq! datalen=111821
   QReader: received TaggedEntry(TestWriteTag,[B@423328cb)
   Debug: Sending response:  XferWriteResp(abc,111821,0,[B@69ab9339)
   Info: request: received 439 bytes
-  unpacked org.openchai.tcp.xfer.XferWriteResp
+  unpacked com.pointr.tcp.xfer.XferWriteResp
   Debug: XferIf: Result is XferWriteResp(abc,111821,0,[B@37efd131)
-  unpacked org.openchai.tcp.xfer.CompleteWriteReq
-  Debug: Message received: org.openchai.tcp.xfer.CompleteWriteReq@3a5ed70c
+  unpacked com.pointr.tcp.xfer.CompleteWriteReq
+  Debug: Message received: com.pointr.tcp.xfer.CompleteWriteReq@3a5ed70c
   Completed Write for TcpXferConfig(blah,/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg) the Datawrite config=TcpXferConfig(blah,/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg)
   Debug: Sending response:  CompletedResp(PrepRespStruct(0,0,blah))
   Info: request: received 386 bytes
-  unpacked org.openchai.tcp.xfer.CompletedResp
+  unpacked com.pointr.tcp.xfer.CompletedResp
   CompleteWrite response: CompletedResp(PrepRespStruct(0,0,blah))
   Client: beginning Write Controller for TcpXferConfig(/tmp/xferout1,/tmp/xferout2)
   PrepareWrite ..
-  unpacked org.openchai.tcp.xfer.PrepWriteReq
+  unpacked com.pointr.tcp.xfer.PrepWriteReq
   Debug: Message received: PrepWriteReq(TcpXferConfig(/tmp/xferout1,/tmp/xferout2))
   Prepping the Datawrite config=TcpXferConfig(/tmp/xferout1,/tmp/xferout2)
   Debug: Sending response:  PrepResp(PrepRespStruct(0,0,/tmp/xferout1))
   Info: request: received 386 bytes
-  unpacked org.openchai.tcp.xfer.PrepResp
+  unpacked com.pointr.tcp.xfer.PrepResp
   PrepareWrite response: PrepResp(PrepRespStruct(0,0,/tmp/xferout1))
   Debug: XferIf: Sending request: XferWriteParams: config=TcpXferConfig(/tmp/xferout1,/tmp/xferout2) datalen=111956} md5len=16}
-  unpacked org.openchai.tcp.xfer.XferWriteReq
+  unpacked com.pointr.tcp.xfer.XferWriteReq
   Debug: Message received: XferWriteReq(XferWriteParams: config=TcpXferConfig(/tmp/xferout1,/tmp/xferout2) datalen=111956} md5len=16})
   XferWriteReq! datalen=111956
   Debug: Sending response:  XferWriteResp(abc,111956,0,[B@128db6cf)
   QReader: received TaggedEntry(FunnyPicTag,[B@460ca455)
   Info: request: received 439 bytes
-  unpacked org.openchai.tcp.xfer.XferWriteResp
+  unpacked com.pointr.tcp.xfer.XferWriteResp
   Debug: XferIf: Result is XferWriteResp(abc,111956,0,[B@681a8b4e)
-  unpacked org.openchai.tcp.xfer.CompleteWriteReq
-  Debug: Message received: org.openchai.tcp.xfer.CompleteWriteReq@26f97588
+  unpacked com.pointr.tcp.xfer.CompleteWriteReq
+  Debug: Message received: com.pointr.tcp.xfer.CompleteWriteReq@26f97588
   Completed Write for TcpXferConfig(/tmp/xferout1,/tmp/xferout2) the Datawrite config=TcpXferConfig(/tmp/xferout1,/tmp/xferout2)
   Debug: Sending response:  CompletedResp(PrepRespStruct(0,0,/tmp/xferout1))
   Info: request: received 395 bytes
-  unpacked org.openchai.tcp.xfer.CompletedResp
+  unpacked com.pointr.tcp.xfer.CompletedResp
   CompleteWrite response: CompletedResp(PrepRespStruct(0,0,/tmp/xferout1))
   Client: got result XferWriteResp(abc,111956,0,[B@681a8b4e)
   unpacked org.openchai.tensorflow.LabelImgReq

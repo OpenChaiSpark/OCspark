@@ -6,7 +6,7 @@ import org.json4s.JsonDSL._
 import org.json4s.DefaultFormats._
 import org.json4s.jackson.Serialization.write
 import org.openchai.util.YamlConf
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.util.Logger._
 
 object JsonUtils {
   implicit val formats = DefaultFormats // Brings in default date formats etc.

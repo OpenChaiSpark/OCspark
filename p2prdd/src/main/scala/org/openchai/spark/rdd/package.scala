@@ -16,15 +16,15 @@
  */
 package org.openchai.spark
 
-import org.openchai.tcp.rpc
-import org.openchai.tcp.rpc.ArrayData
+import com.pointr.tcp.rpc
+import com.pointr.tcp.rpc.ArrayData
 
 /**
  * package
  *
  */
 package object rdd {
-  import org.openchai.tcp
+  import com.pointr.tcp
 
   type DArray = rpc.DArray // Array[Double]
   type MData = rpc.MData

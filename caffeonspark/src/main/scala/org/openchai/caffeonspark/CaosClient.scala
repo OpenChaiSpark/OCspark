@@ -3,9 +3,9 @@ package org.openchai.caffeonspark
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 
-import org.openchai.tcp.rpc._
-import org.openchai.tcp.util.{FileUtils, TcpCommon}
-import org.openchai.tcp.xfer._
+import com.pointr.tcp.rpc._
+import com.pointr.tcp.util.{FileUtils, TcpCommon}
+import com.pointr.tcp.xfer._
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

@@ -2,11 +2,11 @@ package org.openchai.tensorflow
 
 import java.io.File
 
-import org.openchai.tcp.util.Logger.{debug, error, warn}
-import org.openchai.tcp.util.{FileUtils, Logger}
+import com.pointr.tcp.util.Logger.{debug, error, warn}
+import com.pointr.tcp.util.{FileUtils, Logger}
 import org.openchai.tensorflow.GpuClient.{GpuAlternate, GpuClientInfo, GpuInfo, GpusInfo}
 import GpuLogger._
-import org.openchai.tcp.rpc.TcpParams
+import com.pointr.tcp.rpc.TcpParams
 import org.openchai.util.TfAppConfig
 
 import scala.collection.mutable.{ArrayBuffer => AB}

@@ -12,7 +12,7 @@ import fi.iki.elonen.NanoHTTPD.IHTTPSession
 import fi.iki.elonen.NanoHTTPD._
 
 import scala.collection.mutable
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.util.Logger._
 
 
 abstract class SimpleHttpServer(inPort: Int) {

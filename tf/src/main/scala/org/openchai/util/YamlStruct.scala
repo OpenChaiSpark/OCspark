@@ -3,7 +3,7 @@ package org.openchai.util
 import java.io.FileInputStream
 
 import org.yaml.snakeyaml.Yaml
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.util.Logger._
 import org.openchai.tensorflow.{AnyMap, MapMap, StringMap}
 
 class AppConfig(yamlPath: String, os: String) {

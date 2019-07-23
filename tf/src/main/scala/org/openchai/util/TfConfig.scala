@@ -1,6 +1,6 @@
 package org.openchai.util
 
-import org.openchai.tcp.util.FileUtils
+import com.pointr.tcp.util.FileUtils
 
 import scala.collection.immutable.HashMap
 

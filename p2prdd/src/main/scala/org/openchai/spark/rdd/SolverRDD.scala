@@ -2,7 +2,7 @@ package org.openchai.spark.rdd
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.openchai.tcp.rpc.{P2pConnectionParams, SolverServerIf}
+import com.pointr.tcp.rpc.{P2pConnectionParams, SolverServerIf}
 
 import scala.reflect.ClassTag
 

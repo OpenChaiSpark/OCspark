@@ -4,10 +4,10 @@ import java.net.ConnectException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 
-import org.openchai.tcp.rpc._
-import org.openchai.tcp.util.Logger._
-import org.openchai.tcp.util._
-import org.openchai.tcp.xfer._
+import com.pointr.tcp.rpc._
+import com.pointr.tcp.util.Logger._
+import com.pointr.tcp.util._
+import com.pointr.tcp.xfer._
 import org.openchai.util.{AppConfig, TfConfig}
 
 // The main thing we need to override here is using XferQConServerIf inside the server object

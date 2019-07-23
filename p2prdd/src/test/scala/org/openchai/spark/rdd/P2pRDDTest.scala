@@ -18,7 +18,7 @@ package org.openchai.spark.rdd
 
 import org.apache.spark.SparkContext
 import org.openchai.spark.util.TcpUtils
-import org.openchai.tcp.rpc.{TcpParams, TcpServer}
+import com.pointr.tcp.rpc.{TcpParams, TcpServer}
 
 object P2pRDDTest {
   def main(args: Array[String]) = {

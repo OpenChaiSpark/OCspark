@@ -5,13 +5,13 @@ import java.nio.file.{FileAlreadyExistsException, Files, Paths}
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.{Comparator, PriorityQueue}
 
-import org.openchai.tcp.util.FileUtils
-import org.openchai.tcp.util.FileUtils.fileExt
+import com.pointr.tcp.util.FileUtils
+import com.pointr.tcp.util.FileUtils.fileExt
 import org.openchai.tensorflow.GpuClient.{GpuInfo, ImgInfo, ImgPartition}
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer => AB}
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.util.Logger._
 
 import scala.collection.generic.AtomicIndexFlag
 
@@ -49,7 +49,7 @@ object ImageHandler {
   def getImageLists(inGpus: Seq[GpuInfo], files: Seq[File], batchSize: Int): Seq[ImgPartition] = {
     val (fnamesWithAffinity, otherFnames) = files.partition(f => isDigitsExt(f.getName))
 
-    import org.openchai.tcp.util.FileUtils._
+    import com.pointr.tcp.util.FileUtils._
     val gpuNums = inGpus.map(_.gpuNum)
     if (gpuNums.isEmpty) {
       if (msgCtr.incrementAndGet % 20 == 1) {

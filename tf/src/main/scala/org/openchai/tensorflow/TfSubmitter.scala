@@ -2,8 +2,8 @@ package org.openchai.tensorflow
 
 import java.util.Base64
 
-import org.openchai.tcp.util.FileUtils._
-import org.openchai.tcp.util.Logger._
+import com.pointr.tcp.util.FileUtils._
+import com.pointr.tcp.util.Logger._
 import org.openchai.tensorflow.JsonUtils._
 import org.openchai.tensorflow.web.{HttpUtils, TfWebServer}
 import org.openchai.util.{TfAppConfig, TfConfig}

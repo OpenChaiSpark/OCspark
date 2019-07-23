@@ -5,9 +5,9 @@ import java.net.SocketException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{Callable, Executors, TimeUnit, TimeoutException}
 
-import org.openchai.tcp.util.FileUtils.{fileExt, fileName, writeBytes}
-import org.openchai.tcp.util.Logger.{error, info}
-import org.openchai.tcp.util.{ExecResult, FileUtils, TcpUtils}
+import com.pointr.tcp.util.FileUtils.{fileExt, fileName, writeBytes}
+import com.pointr.tcp.util.Logger.{error, info}
+import com.pointr.tcp.util.{ExecResult, FileUtils, TcpUtils}
 import org.openchai.tensorflow.GpuClient._
 import org.openchai.tensorflow.DirectSubmitter.ThreadResult
 
