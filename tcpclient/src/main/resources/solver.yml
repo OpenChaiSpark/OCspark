@@ -1,0 +1,9 @@
+map:
+  SolverIf :
+    className : com.pointr.tcp.rpc.SolverIf
+    data:
+      nrows: 50
+      ncols: 20
+    model:
+      maxLoops: 3
+

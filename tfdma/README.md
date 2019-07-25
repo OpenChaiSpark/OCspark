@@ -19,14 +19,14 @@ Sample output from PcieDMAClientTest and PcieDMAServerTest
   -------------------------------------------------------
    T E S T S
   -------------------------------------------------------
-  Running org.openchai.tensorflow.api.PcieDMAClientTest
+  Running com.pointr.tensorflow.api.PcieDMAClientTest
   Loading DMA native library /git/OCSpark/tfdma/src/main/cpp/dmaserver.dylib ..
   [0323 22:51:04.695] Info: SetupChannel for {"fn":"setupChannel","payload":"something"}
   [0323 22:51:04.695] Info: register DMACallback invoked for
   Loading DMA native library /git/OCSpark/tfdma/src/main/cpp/dmaclient.dylib ..
   [0323 22:51:04.695] Info: Starting battery ..
   Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.373 sec
-  Running org.openchai.tensorflow.api.PcieDMAServerTest
+  Running com.pointr.tensorflow.api.PcieDMAServerTest
   Loading DMA native library /git/OCSpark/tfdma/src/main/cpp/dmaserver.dylib ..
   [0323 22:51:04.695] Info: Starting Server battery ..
   Loading DMA native library /git/OCSpark/tfdma/src/main/cpp/dmaserver.dylib ..
@@ -47,7 +47,7 @@ Sample output from PcieDMAClientTest and PcieDMAServerTest
   [0323 22:51:04.695] Info: ShutdownCannel for "blah"
   [0323 22:51:04.695] Info: shutdownChannel result: CServer shutdownChannelN: "blah"
   Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 sec
-  Running org.openchai.tensorflow.api.TcpDMAServerTest
+  Running com.pointr.tensorflow.api.TcpDMAServerTest
   [0323 22:51:04.695] Info: SetupChannel for blah
   [0323 22:51:04.695] Info: setupChannel result: {"fn":"SetupChannel","rc":1,"msg":"Foo"}
   [0323 22:51:04.695] Info: ShutdownCannel for blah
@@ -60,28 +60,28 @@ Sample output from PcieDMAClientTest and PcieDMAServerTest
   [0323 22:51:04.695] Info: register DMACallback invoked for
   [0323 22:51:04.695] Info: ShutdownCannel for blah
   [0323 22:51:04.695] Info: read for blah
-  [0323 22:51:04.695] Info: rcvata result: org.openchai.tensorflow.api.DMAStructures$ReadResultStruct@e320068
+  [0323 22:51:04.695] Info: rcvata result: com.pointr.tensorflow.api.DMAStructures$ReadResultStruct@e320068
   [0323 22:51:04.695] Info: ShutdownCannel for blah
   [0323 22:51:04.695] Info: write for blah and dataLen=11
-  [0323 22:51:04.695] Info: sendata result: org.openchai.tensorflow.api.DMAStructures$WriteResultStruct@1f57539
+  [0323 22:51:04.695] Info: sendata result: com.pointr.tensorflow.api.DMAStructures$WriteResultStruct@1f57539
   [0323 22:51:04.695] Info: ShutdownCannel for blah
   Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 sec
   CServer setupChannelN: {"fn":"setupChannel","payload":"something"}
   CServer registerN: (null)
   CServer setupChannelN: {"fn":"setupChannel","payload":"something"}
   CServer prepareWriteN: {"fn":"prepareWrite","payload":"something"}
-  Server Java_org_openchai_tensorflow_api_PcieDMAClient_writeN says: {"fn":"write","payload":"something"}. Oh and have a nice day.
+  Server Java_com_pointr_tensorflow_api_PcieDMAClient_writeN says: {"fn":"write","payload":"something"}. Oh and have a nice day.
   CServer completeWriteN: {"fn":"completeWrite","payload":"something"}
   CServer prepareReadN: {"fn":"prepareRead","payload":"something"}
   CServer completeReadN: {"fn":"completeRead","payload":"something"}
   CServer shutdownChannelN: blah
   CServer setupChannelN: "blah"
   CServer prepareWriteN: "PrepareSend"
-  Server Java_org_openchai_tensorflow_api_PcieDMAServer_writeN says: "blah". Oh and have a nice day.
+  Server Java_com_pointr_tensorflow_api_PcieDMAServer_writeN says: "blah". Oh and have a nice day.
   CServer prepareWriteN: "completeSend"
   CServer prepareWriteN: "PrepareRcv"
-  Server Java_org_openchai_tensorflow_api_PcieDMAServer_readN says: "read". Oh and have a nice day.
-  Server Java_org_openchai_tensorflow_api_PcieDMAServer_readN says: "completeRcv". Oh and have a nice day.
+  Server Java_com_pointr_tensorflow_api_PcieDMAServer_readN says: "read". Oh and have a nice day.
+  Server Java_com_pointr_tensorflow_api_PcieDMAServer_readN says: "completeRcv". Oh and have a nice day.
   CServer shutdownChannelN: "blah"
 
   Results :

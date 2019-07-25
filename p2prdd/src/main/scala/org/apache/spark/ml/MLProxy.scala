@@ -17,11 +17,8 @@
 package org.apache.spark.ml
 
 import org.apache.spark.SparkContext
-import org.apache.spark.ml.classification._
-import org.apache.spark.ml.feature.StringIndexer
-import org.apache.spark.ml.util.MLWritable
-import org.apache.spark.mllib.linalg.{BLAS, Vector, DenseVector}
-import org.apache.spark.sql.{SQLContext, DataFrame}
+import org.apache.spark.mllib.linalg.{BLAS, DenseVector, Vector}
+import org.apache.spark.sql.SQLContext
 
 object MLProxy {
   def axpy(a: Double, x: Vector, y: Vector) = BLAS.axpy(a, x, y)

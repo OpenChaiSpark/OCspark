@@ -33,11 +33,11 @@ mvn -DskipTests=true package
 
 <h4> Testing P2pRDD:</h4>
 
-spark-submit --master spark://\<host\>:7077 --jars $(pwd)/libs/spark_p2prdd-1.0.0.jar --class org.openchai.spark.rdd.P2pRDDTest $(pwd)/libs/spark_p2prdd-1.0.0-tests.jar spark://\<host\>:7077
+spark-submit --master spark://\<host\>:7077 --jars $(pwd)/libs/spark_p2prdd-1.0.0.jar --class com.pointr.spark.rdd.P2pRDDTest $(pwd)/libs/spark_p2prdd-1.0.0-tests.jar spark://\<host\>:7077
 
 <h4>Testing LsSinkRDD and LsSourceRDD:</h4>
 
-spark-submit --master spark://\<host\>:7077 --jars $(pwd)/libs/spark_p2prdd-1.0.0.jar --class org.openchai.spark.rdd.P2pRDDTest $(pwd)/libs/spark_p2prdd-1.0.0-tests.jar spark://\<host\>:7077
+spark-submit --master spark://\<host\>:7077 --jars $(pwd)/libs/spark_p2prdd-1.0.0.jar --class com.pointr.spark.rdd.P2pRDDTest $(pwd)/libs/spark_p2prdd-1.0.0-tests.jar spark://\<host\>:7077
 
 <h4>Testing Rexec:</h4>
 

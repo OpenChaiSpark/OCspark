@@ -9,7 +9,7 @@ BUILDING:
 The <b>TFClientTest</b> sends images from TFClient to TFServer that runs TensorFlow and returns its <b>Image Tagging</b> results.
 
 <pre>
-   mvn package -Dmaven.test.skip  exec:java -Dexec.mainClass="org.openchai.tensorflow.TfClient"
+   mvn package -Dmaven.test.skip  exec:java -Dexec.mainClass="com.pointr.tensorflow.TfClient"
 </pre>
   
 Sample Output from <b>TFClientTest</b>
@@ -82,7 +82,7 @@ Sample Output from <b>TFClientTest</b>
   unpacked com.pointr.tcp.xfer.CompletedResp
   CompleteWrite response: CompletedResp(PrepRespStruct(0,0,/tmp/xferout1))
   Client: got result XferWriteResp(abc,111956,0,[B@681a8b4e)
-  unpacked org.openchai.tensorflow.LabelImgReq
+  unpacked com.pointr.tensorflow.LabelImgReq
   Debug: Message received: LabelImgReq(LabelImg: tag=funnyPic path=/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg datalen=111821 md5len=16)
   Service: Invoking LabelImg: struct=LabelImg: tag=funnyPic path=/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg datalen=111821 md5len=16
   LabelImg: processing LabelImg: tag=funnyPic path=/git/OCSpark/tf/src/main/resources//images/JohnNolteAndDad.jpg datalen=111821 md5len=16 ..
@@ -102,7 +102,7 @@ Sample Output from <b>TFClientTest</b>
   I tensorflow/examples/label_image/main.cc:206] valley (360): 0.0660103
   I tensorflow/examples/label_image/main.cc:206] suspension bridge (681): 0.0555012)))
   Info: request: received 2430 bytes
-  unpacked org.openchai.tensorflow.LabelImgResp
+  unpacked com.pointr.tensorflow.LabelImgResp
   LabelImg response: LabelImgResp(LabelImgRespStruct(ExecResult(/shared/tensorflow//shared/tensorflow/bazel-bin/tensorflow/examples/label_image/label_image--image=/tmp/images/JohnNolteAndDad.jpg,2594,0,,W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use SSE4.2 instructions, but these are available on your machine and could speed up CPU computations.
   W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX instructions, but these are available on your machine and could speed up CPU computations.
   W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX2 instructions, but these are available on your machine and could speed up CPU computations.

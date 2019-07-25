@@ -21,7 +21,7 @@
     <version>1.0.0</version>
 
     <parent>
-        <groupId>org.openchai.ocspark</groupId>
+        <groupId>com.pointr.rpc</groupId>
         <artifactId>parent</artifactId>
         <version>1.0.0</version>
     </parent>
@@ -34,8 +34,8 @@
             <version>2.2.2</version>
         </dependency>
         <dependency>
-            <groupId>org.openchai.ocspark</groupId>
-            <artifactId>tcpclient</artifactId>
+            <groupId>com.pointr.rpc</groupId>
+            <artifactId>rpcclient</artifactId>
           <version>${project.version}</version>
         </dependency>
 
