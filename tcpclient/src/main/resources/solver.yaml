@@ -1,6 +1,8 @@
 map:
   SolverIf :
     className : com.pointr.tcp.rpc.SolverIf
+    serverHost: localhost
+    serverPort: 4561
     data:
       nrows: 50
       ncols: 20

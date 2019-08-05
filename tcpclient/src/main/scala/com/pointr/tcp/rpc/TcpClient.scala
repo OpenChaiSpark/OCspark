@@ -9,7 +9,7 @@ case class TcpParams(server: String, port: Int) extends P2pConnectionParams
 //class BinaryTcpClient(connParams: TcpParams) extends TcpClient(connParams, new BinaryIf)
 
 class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
-  extends Thread with P2pRpc with P2pBinding {
+  extends P2pRpc with P2pBinding {
 
   import java.io._
   import java.net._
@@ -21,6 +21,10 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
   private var is: DataInputStream = _
 
   val MaxTcpWaitSecs = 2
+
+  {
+    connect(connParams)
+  }
 
   override def isConnected: Boolean = sock.isConnected && is != null && os != null
 
@@ -41,13 +45,6 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
         throw e
     }
   }
-
-
-  override def run(): Unit = {
-    connect(connParams)
-    Thread.currentThread.join()
-  }
-
   private var savedConnParam: P2pConnectionParams = _
 
   val buf = new Array[Byte](BufSize)
@@ -64,10 +61,6 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
     debug(s"Wrote $sent bytes to output")
 
     var totalRead = 0
-    //      val available = dis.available
-    //      if (available <= 0) {
-    //        Thread.sleep(200)
-    //      } else {
     val bytesToRead = is.readInt
     debug(s"Client BytesToRead = $bytesToRead")
     do {
@@ -97,7 +90,6 @@ object TcpClient {
 
   def runClient(server: String, port: Int, serviceIf: ServiceIf) = {
     val client = new TcpClient(TcpParams(server, port), serviceIf)
-    client.start()
     client
   }
 
@@ -107,11 +99,17 @@ object TcpClient {
     new SolverIf
   }
 
-  def main(args: Array[String]) {
+  def runClientFromArgs(args: Array[String]) = {
     val server = if (args.length >= 1) args(0) else TcpUtils.getLocalHostname
     val port = if (args.length >= 2) args(1).toInt else TestPort
-    val serviceConf = if (args.length >= 3) args(2) else "solver.yml"
+    val serviceConf = if (args.length >= 3) args(2) else "solver.yaml"
     val serviceIf = serviceFromConf(serviceConf)
     val client = runClient(server, port, serviceIf)
+    client
+  }
+
+  def main(args: Array[String]) {
+    val client = runClientFromArgs(args)
+    Thread.currentThread.join
   }
 }

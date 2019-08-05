@@ -16,23 +16,17 @@
  */
 package com.pointr.tcp.rpc
 
-import java.io.{BufferedOutputStream, DataInputStream, DataOutputStream}
+import java.io.{DataInputStream, DataOutputStream}
 import java.net._
-import java.util
 import java.util.concurrent.Executors
 
-import com.pointr.tcp.util.Logger._
-import com.pointr.tcp.util.TcpCommon
+import com.pointr.tcp.util.Logger
 
-import scala.collection.mutable
+case class ServerIfConf(serviceName: String, className: String, props: Map[String, Any])
 
-object TcpServer {
-  val DefaultPort = 8989
-}
+case class TcpServerConf(serverServiceIfs: Map[String,ServerIfConf], host: String = "localhost", port: Int = 4561)
 
-case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pServer with P2pBinding {
-
-  import TcpServer._
+case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pServer with P2pBinding with Logger {
 
   private var serverThread: Thread = _
   private var serverSocket: ServerSocket = _
@@ -143,3 +137,16 @@ case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pSer
   }
 }
 
+
+object TcpServer {
+
+  val DefaultPort = 8989
+
+  def createDefaultServer(confPath: String)= {
+    val server = TcpServer("localhost",DefaultPort,
+      new SolverServerIf(ConfParser.parseServerConf(DefaultConfPath).serverServiceIfs("Solver")))
+    server
+  }
+  var DefaultConfPath = s"${System.getProperty("user.home")}/etc/rpc/rpcServer.yaml"
+
+}

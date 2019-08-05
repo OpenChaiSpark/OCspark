@@ -1,0 +1,9 @@
+host: localhost
+port: 8989
+serverServiceIfs:
+    SolverServerIf :
+        serviceName: Solver
+        className : com.pointr.tcp.rpc.SolverServerIf
+#        clientClassName : com.pointr.tcp.rpc.SolverIf
+        props:
+            weightsMergePolicy: best

@@ -1,18 +1,21 @@
 package com.pointr.tcp
 
-import com.pointr.tcp.rpc.{SolverServerIf, TcpClient, TcpServer}
+import com.pointr.tcp.rpc.{ServerFactory, SolverServerIf, TcpClient, TcpServer}
 import com.pointr.tcp.util.TcpUtils
 
 object TcpExample {
 
-  val weightsMergePolicy: String = "best"
-  val TestPort = TcpServer.DefaultPort
-
-  def main(args: Array[String]) {
+  def run(args: Array[String]) {
     System.setProperty("logger.level","3")
-    val server = TcpServer(TcpUtils.getLocalHostname, TestPort, new SolverServerIf(weightsMergePolicy))
-    server.start
-    TcpClient.main(Array(TcpUtils.getLocalHostname,"" + TestPort))
-    Thread.currentThread.join
+    val confPath = "src/main/resources/solver-server.yaml"
+    val servers = ServerFactory.create(confPath)
+    Thread.sleep(200)
+    val client = TcpClient.runClientFromArgs(Array(TcpUtils.getLocalHostname,"" + TcpServer.DefaultPort))
+    val iter = client.serviceIf.run()
+    Thread.sleep(20*1000)
+  }
+
+  def main(args: Array[String]): Unit = {
+    run(args)
   }
 }

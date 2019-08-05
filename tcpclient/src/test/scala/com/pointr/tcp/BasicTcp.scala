@@ -11,9 +11,7 @@ class BasicTcp extends FunSuite {
     val TestPort = TcpServer.DefaultPort
 
     System.setProperty("logger.level", "3")
-    val server = TcpServer(TcpUtils.getLocalHostname, TestPort, new SolverServerIf(weightsMergePolicy))
-    server.start
-    TcpClient.main(Array(TcpUtils.getLocalHostname, "" + TestPort))
-
+//    val server = TcpServer(TcpUtils.getLocalHostname, TestPort, new SolverServerIf(weightsMergePolicy))
+    TcpExample.run(Array.empty[String])
   }
 }
