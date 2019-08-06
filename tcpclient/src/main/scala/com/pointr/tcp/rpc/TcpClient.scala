@@ -100,10 +100,14 @@ object TcpClient {
 
   System.setProperty("java.net.preferIPv4Stack","true")
 
-  def runClient(host: String, port: Int, serviceIf: ServiceIf) = {
+  def createClient(host: String, port: Int, serviceIf: ServiceIf) = {
     val client = new TcpClient(TcpParams(host, port), serviceIf)
-    client.serviceIf.run()
     client
+  }
+
+  def runClient(client: TcpClient) = {
+    val ret = client.serviceIf.run()
+    ret
   }
 
   def serviceConfFromPath(serviceConfPath: String) = {
@@ -128,17 +132,18 @@ object TcpClient {
     service.asInstanceOf[ServiceIf]
   }
 
-  def runClientFromArgs(args: Array[String]) = {
-    val Array(host,sPort, serviceConfPath) = args
+  def createClientFromArgs(args: Array[String]) = {
+    val Array(host, sPort, serviceConfPath) = args
     val port = sPort.toInt
     val serviceConf = serviceConfFromPath(serviceConfPath)
     val service = serviceFromConf(serviceConf)
-    val client = runClient(host, port, service)
+    val client = createClient(host, port, service)
     client
   }
 
   def main(args: Array[String]) {
-    val client = runClientFromArgs(args)
+    val client = createClientFromArgs(args)
+    val ret = runClient(client)
     Thread.currentThread.join
   }
 }

@@ -1,28 +1,23 @@
 package com.pointr.tcp.rexec;
+
+import com.pointr.tcp.rpc.TcpClient$;
+import com.pointr.tcp.rpc.TcpClient;
 import com.pointr.tcp.rpc.TcpParams;
 import com.pointr.tcp.rpc.TcpServer;
 import com.pointr.tcp.rpc.TcpServer$;
-import com.pointr.tcp.util.ExecParams;
-import scala.*;
-import scala.collection.JavaConverters;
-import scala.collection.Seq;
+import junit.framework.TestCase;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
+public class RexecTestJava extends TestCase {
 
-public class RexecTestJava {
-  public static void  main(String[] args)  {
-    String server = args[0];
-    TcpParams tcpParams = new TcpParams(server, TcpServer$.MODULE$.DefaultPort());
+  public void testBasic() throws InterruptedException {
+    TcpParams tcpParams = new TcpParams("localhost", TcpServer$.MODULE$.DefaultPort());
     TcpServer rexecServer = RexecServer$.MODULE$.apply(tcpParams, "ls -lrta /tmp");
     rexecServer.start();
-//    String res = rexecClient.run(new RexecParams(new ExecParams("ls","ls",
-//        Option.<Seq<String>>apply(JavaConverters.<String>asScalaBufferConverter(
-//                Arrays.<String>asList("-lrta .".split(" "))).asScala().toSeq()),
-//        Option.apply(null),"/etc/pam.d")), 5);
-//    System.out.println("Result: %s".format(res));
-
+    TcpClient client = TcpClient$.MODULE$.createClientFromArgs(new String[]{"localhost", "8989", "src/main/resources/rexec-client.yaml"});
+    String output = (String) client.serviceIf().run();
+    assert output.contains("RexecResp(ExecResult(ls  -lrta /shared") : "ExecResults failed Loop message check1";
+    assert output.contains("drwxr-xr-x") : "ExecResults failed Loop message check2";
+//    Thread.currentThread().join();
   }
 }
 

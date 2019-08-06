@@ -7,7 +7,8 @@ object RexecExample {
     val tcpParams = TcpParams("localhost", TcpServer.DefaultPort)
     val rexecServer = RexecServer(tcpParams, "ls -lrta /git")
     rexecServer.start
-    val client = TcpClient.runClientFromArgs(Array("localhost", "8989", "src/main/resources/rexec-client.yaml"))
+    val client = TcpClient.createClientFromArgs(Array("localhost", "8989", "src/main/resources/rexec-client.yaml"))
+    client.serviceIf.run()
     Thread.currentThread().join
   }
 }

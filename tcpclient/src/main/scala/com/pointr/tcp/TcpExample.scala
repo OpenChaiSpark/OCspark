@@ -10,7 +10,7 @@ object TcpExample {
     val confPath = "src/main/resources/solver-server.yaml"
     val servers = ServerFactory.create(confPath)
     Thread.sleep(200)
-    val client = TcpClient.runClientFromArgs(Array(TcpUtils.getLocalHostname,"" + TcpServer.DefaultPort))
+    val client = TcpClient.createClientFromArgs(Array(TcpUtils.getLocalHostname,"" + TcpServer.DefaultPort))
     val iter = client.serviceIf.run(Seq.empty[Any])
     Thread.sleep(20*1000)
   }

@@ -1,19 +1,3 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.pointr.tcp
 
 import com.pointr.tcp.util.{FileUtils, Logger, TcpUtils}
@@ -22,8 +6,8 @@ import com.pointr.tcp.util.Logger._
 
 package object rpc {
 
-  case class ServiceConf(serviceName: String, className: String, props: Map[String, Any],host: String = "localhost", port: Int = 4561, logLevel: Int = 2) {
-    if (logLevel!=2) System.setProperty("logger.level", logLevel.toString)
+  case class ServiceConf(serviceName: String, className: String, props: Map[String, Any], host: String = "localhost", port: Int = 4561, logLevel: Int = 2) {
+    if (logLevel != 2) System.setProperty("logger.level", logLevel.toString)
   }
 
   // Use an abstract class instead of trait to permit interoperability with Java
@@ -65,7 +49,8 @@ package object rpc {
     def init() = {}
 
     def run(): Any = {}
-    def run(args: Seq[Any]):  Any = {}
+
+    def run(args: Seq[Any]): Any = {}
 
     def stop() = {}
 
@@ -75,36 +60,36 @@ package object rpc {
 
   }
 
-  abstract class ServerIf( serverIfName: String, val confOpt: Option[ServerIfConf]  = None) {
+  abstract class ServerIf(serverIfName: String, val confOpt: Option[ServerIfConf] = None) {
 
-//    def name: String = confOpt.map( _.serviceName).getOrElse(_name)
-//    private var _name: String = "emptyName"
-//
-//    confOpt.map { conf =>
-//      this._name
-//    }
-//    @deprecated
-//    def this(_name: String) = {
-//      this(None)
-//      this._name = _name
-//    }
+    //    def name: String = confOpt.map( _.serviceName).getOrElse(_name)
+    //    private var _name: String = "emptyName"
+    //
+    //    confOpt.map { conf =>
+    //      this._name
+    //    }
+    //    @deprecated
+    //    def this(_name: String) = {
+    //      this(None)
+    //      this._name = _name
+    //    }
 
-    def name()= confOpt.map { conf =>
+    def name() = confOpt.map { conf =>
       conf.serviceName
     }.getOrElse(this.serverIfName)
 
     def service(req: P2pReq[_]): P2pResp[_]
   }
 
-  abstract class P2pMessage[T] extends java.io.Serializable {
+  abstract class P2pMessage[T] extends _root_.java.io.Serializable {
     def path(): DataPtr = getClass.getName
 
     def value(): T
   }
 
-  abstract class P2pReq[T] extends P2pMessage[T] with java.io.Serializable
+  abstract class P2pReq[T] extends P2pMessage[T] with _root_.java.io.Serializable
 
-  abstract class P2pResp[T] extends P2pMessage[T] with java.io.Serializable
+  abstract class P2pResp[T] extends P2pMessage[T] with _root_.java.io.Serializable
 
   val MagicNumber: String = "MyNameIsFozzieBear"
 

@@ -1,7 +1,5 @@
 package com.pointr.tcp
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.pointr.tcp.rpc.{P2pReq, P2pResp, ServiceIf}
 import com.pointr.tcp.util.{ExecParams, ExecResult, Logger}
 

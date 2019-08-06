@@ -172,6 +172,6 @@ object TcpServer {
       new SolverServerIf(ConfParser.parseServerConf(DefaultConfPath).serverServiceIfs("Solver")))
     server
   }
-  var DefaultConfPath = s"${System.getProperty("user.home")}/etc/rpc/rpcServer.yaml"
+  var DefaultConfPath = "/git/OCspark/tcpclient/src/main/resources/solver-server.yaml"
 
 }
