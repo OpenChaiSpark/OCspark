@@ -54,11 +54,20 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
       connect(savedConnParam)
     }
     val serreq = serializeStream(req.path, pack(req.path, req))
+    val b1 = MagicNumber.getBytes("ISO-8859-1")
+    os.write(b1)
     os.writeInt(serreq.length)
     os.write(serreq)
     val sent = serreq.length
     os.flush
     debug(s"Wrote $sent bytes to output")
+
+    val b = new Array[Byte](MagicNumber.length)
+    val magicNumberLen = is.read(b)
+    val magicNumber = new String(b,"ISO-8859-1")
+    if (magicNumberLen != MagicNumber.length || magicNumber != MagicNumber) {
+      throw new IllegalStateException(s"MagicNumber mismatch: len=$magicNumberLen and magicNumber=$magicNumber")
+    }
 
     var totalRead = 0
     val bytesToRead = is.readInt

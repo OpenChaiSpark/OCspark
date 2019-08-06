@@ -34,7 +34,7 @@ class SolverServerIf(conf: ServerIfConf) extends ServerIf("SolverServerIf") {
   import collection.mutable
 
   var loops = 0
-  val MaxLoops = 20
+  val MaxLoops = 30
 
   var curWeightsAndAccuracy: (DArray, Double) = (null,-1.0)
   override def service(req: P2pReq[_]): P2pResp[_] = {

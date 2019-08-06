@@ -16,7 +16,7 @@ class CompleteWriteReq(val value: XferConfig) extends P2pReq[XferConfig]
 
 case class PrepRespStruct(len: Int, elapsed: Int, path: String)
 
-case class PrepResp(val value: PrepRespStruct) extends P2pResp[PrepRespStruct]
+case class PrepResp(value: PrepRespStruct) extends P2pResp[PrepRespStruct]
 
 case class CompletedResp(value: PrepRespStruct) extends P2pResp[PrepRespStruct]
 

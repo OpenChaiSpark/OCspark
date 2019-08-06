@@ -189,7 +189,10 @@ object SolverIf {
       //        (error, state)
       //      }
       //      EpochResult(Weights(data.dims, state.x.toArray), state.grad.toArray, err, Math.max(0.01, 1 - err/15.0))
-      null.asInstanceOf[EpochResult]
+      Thread.sleep(1500)
+
+//      null.asInstanceOf[EpochResult]
+      EpochResult.ExampleEpochResult
     }
 
     override def update(params: HyperParams, weights: Weights): Model[MData] = {
@@ -208,6 +211,12 @@ object SolverIf {
   }
 
   case class EpochResult(W: Weights, errors: DArray, totalError: Double, accuracy: Double)
+  object EpochResult {
+    val A = Array
+    val ExampleEpochResult = EpochResult(Weights(Seq(2,1,2),A(9.6,8.5,7.4,6.3,5.2,4.1,3.0,2.9)), A(1.5,2.6,3.7),0.0234,0.95)
+//    val ExampleEpochResult = EpochResult(Weights(Seq(2,1,2),A( A(A(9.6,8.5),A(7.4,6.3)),A(A(5.2,4.1),A(3.0,2.9)))), A(1.5,2.6,3.7),0.0234,0.95)
+
+  }
 
   case class GetModelParamsReq(val clientName: String) extends P2pReq[String] {
     override def value() = clientName // retain the clientName parameter so we know what the value signifies

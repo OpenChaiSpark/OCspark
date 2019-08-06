@@ -77,15 +77,17 @@ package object rpc {
     def service(req: P2pReq[_]): P2pResp[_]
   }
 
-  sealed trait P2pMessage[T] extends java.io.Serializable {
+  abstract class P2pMessage[T] extends java.io.Serializable {
     def path(): DataPtr = getClass.getName
 
     def value(): T
   }
 
-  trait P2pReq[T] extends P2pMessage[T] with java.io.Serializable
+  abstract class P2pReq[T] extends P2pMessage[T] with java.io.Serializable
 
-  trait P2pResp[T] extends P2pMessage[T] with java.io.Serializable
+  abstract class P2pResp[T] extends P2pMessage[T] with java.io.Serializable
+
+  val MagicNumber: String = "MyNameIsFozzieBear"
 
   trait ArrayData[V] {
     def tag: String
