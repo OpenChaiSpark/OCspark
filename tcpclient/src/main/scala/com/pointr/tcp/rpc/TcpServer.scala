@@ -22,7 +22,10 @@ import java.util.concurrent.Executors
 
 import com.pointr.tcp.util.Logger
 
-case class ServerIfConf(serviceName: String, className: String, props: Map[String, Any])
+case class ServerIfConf(serviceName: String, className: String, props: Map[String, Any],optServiceConf: Option[ServiceConf] = None, host: String = "localhost", port: Int = 4561) {
+
+  lazy val serviceConf = optServiceConf.get
+}
 
 case class TcpServerConf(serverServiceIfs: Map[String,ServerIfConf], host: String = "localhost", port: Int = 4561)
 

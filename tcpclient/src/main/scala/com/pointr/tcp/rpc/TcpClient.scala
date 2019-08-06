@@ -1,8 +1,9 @@
 package com.pointr.tcp.rpc
 
+import com.pointr.tcp.rexec.RexecIf
 import com.pointr.tcp.util.Logger._
 import com.pointr.tcp.util.TcpCommon._
-import com.pointr.tcp.util.TcpUtils
+import com.pointr.tcp.util.{FileUtils, ReflectUtils, TcpUtils, YamlUtils}
 
 case class TcpParams(server: String, port: Int) extends P2pConnectionParams
 
@@ -97,23 +98,42 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
 object TcpClient {
   val TestPort = 8989
 
-  def runClient(server: String, port: Int, serviceIf: ServiceIf) = {
-    val client = new TcpClient(TcpParams(server, port), serviceIf)
+  System.setProperty("java.net.preferIPv4Stack","true")
+
+  def runClient(host: String, port: Int, serviceIf: ServiceIf) = {
+    val client = new TcpClient(TcpParams(host, port), serviceIf)
+    client.serviceIf.run()
     client
   }
 
-  def serviceFromConf(serviceConfPath: String) = {
+  def serviceConfFromPath(serviceConfPath: String) = {
     println(s"Creating service from $serviceConfPath..")
-      // YamlStruct ..
-    new SolverIf
+    val service = YamlUtils.toScala[ServiceConf](FileUtils.readFileAsString(serviceConfPath))
+    service
+  }
+
+  def serviceFromConf(serviceConf: ServiceConf) = {
+    val className = serviceConf.className
+    val serviceName = serviceConf.serviceName
+    info(s"Creating $className for ServiceIF $serviceName ..")
+    val service = serviceName match {
+      case "SolverIf" =>
+        val service = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[SolverIf]
+        service
+      case "Rexec" =>
+        val service = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[RexecIf]
+        service
+      case _ => throw new UnsupportedOperationException(s"Unsupported ServiceIf $className")
+    }
+    service.asInstanceOf[ServiceIf]
   }
 
   def runClientFromArgs(args: Array[String]) = {
-    val server = if (args.length >= 1) args(0) else TcpUtils.getLocalHostname
-    val port = if (args.length >= 2) args(1).toInt else TestPort
-    val serviceConf = if (args.length >= 3) args(2) else "solver.yaml"
-    val serviceIf = serviceFromConf(serviceConf)
-    val client = runClient(server, port, serviceIf)
+    val Array(host,sPort, serviceConfPath) = args
+    val port = sPort.toInt
+    val serviceConf = serviceConfFromPath(serviceConfPath)
+    val service = serviceFromConf(serviceConf)
+    val client = runClient(host, port, service)
     client
   }
 

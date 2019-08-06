@@ -16,7 +16,7 @@ trait Logger {
 }
 object Logger {
 
-  val LogLevel = Option(System.getProperty("logger.level")).getOrElse("2").toInt
+  def LogLevel = Option(System.getProperty("logger.level")).getOrElse("2").toInt
   def f(msg: String) = {
     val d = new java.util.Date
     "[%02d%02d-%02d:%02d:%02d.%03d] %s".format(d.getMonth, d.getDate, d.getHours, d.getMinutes, d.getSeconds, d.getTime / 10e10.toInt, msg)

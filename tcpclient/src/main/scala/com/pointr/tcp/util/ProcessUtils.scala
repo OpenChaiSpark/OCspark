@@ -7,6 +7,8 @@ case class ExecResult(params: ExecParams, elapsed: Long, rc: Int, stdout: String
 case class ExecParams(tag: String, process: String, args: Option[Seq[String]] = None,
   env: Option[Seq[String]] = None, dir: String = ".") {
 
+  def this(tag: String, cmdLine: String, dir: String, env: Option[Seq[String]]) = this(tag, cmdLine.split(" ").apply(0),
+    Option(cmdLine.split(" ").tail),  if (env.isEmpty) None else env, dir)
   override def toString: String = process + " " + args.flatMap(arr => Some(arr.mkString(" "," ",""))).getOrElse("")
 
 }

@@ -49,7 +49,7 @@ class P2pRDD[KVO:ClassTag,T:ClassTag](sc: SparkContext, parent: RDD[KVO], p2pPar
     println(s"WARN: cutting datasize to $testingSize original=${bigarr.length}")
 
       val outarr = bigarr.slice(0,testingSize)
-    val iter = updaterIF.run()
+    val iter = updaterIF.run(Seq.empty[Any])
     iter.asInstanceOf[Iterator[T]]
   }
 

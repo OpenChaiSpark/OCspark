@@ -40,7 +40,7 @@ case class GpuRegistry(host: String, port: Int, gpuFailoverService: GpuFailoverS
 
   import GpuRegistry._
 
-  val server = TcpServer(host, port, new ServerIf() {
+  val server = TcpServer(host, port, new ServerIf("GpuService") {
     override def service(req: rpc.P2pReq[_]) = {
       req match {
         case o: RegisterGpuReq =>

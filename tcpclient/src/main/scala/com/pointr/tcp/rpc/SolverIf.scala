@@ -35,16 +35,16 @@ class SolverIf extends ServiceIf("Solver") {
 
   var modelParams: ModelParams = _
   var data: AnyData = _
-  var nLoops: Int = 3
+  var loops: Int = 3
 
   override def configure() = {
     configure(ModelParams(DefaultModel(), DefaultHyperParams()), TestData.mdata(10, 100), 3)
   }
 
-  def configure(modelParams: SolverIf.ModelParams, data: AnyData, nLoops: Int) = {
+  def configure(modelParams: SolverIf.ModelParams, data: AnyData, loops: Int) = {
     this.modelParams = modelParams
     this.data = data
-    this.nLoops = nLoops
+    this.loops = loops
   }
 
   def keepGoing(nLoops: Int): KeepGoingResp = {

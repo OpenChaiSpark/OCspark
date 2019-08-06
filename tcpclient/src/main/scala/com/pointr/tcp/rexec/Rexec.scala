@@ -6,104 +6,9 @@ import com.pointr.tcp.rpc._
 import com.pointr.tcp.util.Logger._
 import com.pointr.tcp.util.{ExecParams, ExecResult, ProcessUtils}
 
-case class RexecParams(execParams: ExecParams)
+class RexecServerIf(conf: ServerIfConf) extends ServerIf("RexecServerIf", Option(conf)) {
 
-  case class Rexec(execParams: ExecParams)
-  case class RexecReq(rexec: Rexec) extends P2pReq[Rexec] {
-    override def value(): Rexec = rexec
-  }
-
-  case class RexecResp(res: ExecResult) extends P2pResp[ExecResult] {
-    override def value(): ExecResult = res
-  }
-
-object Rexec {
-  def main(args: Array[String]): Unit = {
-    val serverOrClient = args(0)
-    System.setProperty("java.net.preferIPv4Stack","true")
-
-    if (serverOrClient.toLowerCase().endsWith("server")) {
-      RexecServer.main(args.tail)
-    } else {
-      RexecTcpClient.main(args.tail)
-    }
-
-  }
-}
-object RexecServer {
-
-  var server: TcpServer = _
-
-  def apply(tcpParams: TcpParams) = {
-    server = TcpServer(tcpParams.server, tcpParams.port,
-      new RexecServerIf(tcpParams))
-    server
-  }
-
-  def main(args: Array[String]): Unit = {
-    val host = args(0)
-    val port = args(1).toInt
-    val server = apply(TcpParams(host, port))
-    server.start
-    Thread.currentThread.join
-  }
-}
-
-class RexecIf extends ServiceIf("Rexec") {
-
-  private val nReqs = new AtomicInteger(0)
-
-  def rexec(execParams: ExecParams): RexecResp = {
-    val resp = getRpc().request(RexecReq(Rexec(execParams)))
-    resp.asInstanceOf[RexecResp]
-  }
-
-  def run(execParams: ExecParams, nLoops: Int) = {
-    var lastResult: String = null
-    for (n <- 0 until nLoops) {
-      // while (keepGoing(n).value) {
-      debug(s"Loop $n: Sending request: $execParams ..")
-      lastResult = rexec(execParams).toString
-      debug(s"Loop #$n: Result is $lastResult")
-    }
-    lastResult
-  }
-
-}
-
-object RexecTcpClient {
-  def main(args: Array[String]): Unit = {
-    val host = args(0)
-    val port = args(1).toInt
-    val cmd = args(2)
-    val params = if (args.length >= 4) Some(args(3).split(":").toSeq) else None
-    val env = if (args.length >= 5) Some(args(4).split(":").toSeq) else None
-    val dir = if (args.length >= 6) args(5) else "."
-    val client = RexecTcpClient(TcpParams(host, port))
-    val rparams = RexecParams(ExecParams(cmd, cmd, params, env, dir))
-    val res = client.run(rparams, 1)
-    info(res.toString)
-  }
-
-}
-
-case class RexecTcpClient(tcpParams: TcpParams) extends TcpClient(tcpParams, new RexecIf) {
-
-  // TODO: see how to use typeclass annotation for the RexecIf
-  val rexecIf = serviceIf.asInstanceOf[RexecIf]
-
-  connect(tcpParams)
-
-  def run(rexecParams: RexecParams, nLoops: Int) = {
-    val result = rexecIf.run(rexecParams.execParams, nLoops)
-    info(s"Client: got result $result")
-    result
-  }
-}
-
-class RexecServerIf(tcpParams: TcpParams) extends ServerIf("RexecServerIf") {
-
-  val rexecIf = new RexecIf
+//  val rexecIf = new RexecIf
 
   private val nReqs = new AtomicInteger(0)
 
@@ -119,4 +24,29 @@ class RexecServerIf(tcpParams: TcpParams) extends ServerIf("RexecServerIf") {
 
 }
 
+object RexecServer {
+
+  val template = """host: $$HOST
+port: $$PORT
+serviceName: Rexec
+className : com.pointr.tcp.rpc.RexecServerIf
+props:
+    cmdline: $$CMDLINE
+"""
+
+  def apply(tcpParams: TcpParams, cmdLine: String) = {
+    System.setProperty("java.net.preferIPv4Stack","true")
+    val confStr = template.replace("$$HOST",tcpParams.server).replace("$$PORT",tcpParams.port.toString).replace("$$CMDLINE",cmdLine)
+    val conf = ConfParser.parseServerIfConf(confStr)
+    TcpServer(tcpParams.server, tcpParams.port, new RexecServerIf(conf))
+  }
+
+  def main(args: Array[String]): Unit = {
+    val host = args(0)
+    val port = args(1).toInt
+    val server = apply(TcpParams(host, port), "ls -lrta /git")
+    server.start
+    Thread.currentThread.join
+  }
+}
 

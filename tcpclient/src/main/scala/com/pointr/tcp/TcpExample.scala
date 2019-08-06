@@ -11,7 +11,7 @@ object TcpExample {
     val servers = ServerFactory.create(confPath)
     Thread.sleep(200)
     val client = TcpClient.runClientFromArgs(Array(TcpUtils.getLocalHostname,"" + TcpServer.DefaultPort))
-    val iter = client.serviceIf.run()
+    val iter = client.serviceIf.run(Seq.empty[Any])
     Thread.sleep(20*1000)
   }
 

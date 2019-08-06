@@ -26,7 +26,7 @@ object SolverServerIf {
   val WeightsMergePolicies = Seq("average", "best")
 }
 
-class SolverServerIf(conf: ServerIfConf) extends ServerIf("SolverServerIf") {
+class SolverServerIf(conf: ServerIfConf) extends ServerIf("SolverServerIf", Option(conf)) {
   val weightsMergePolicy = conf.props("weightsMergePolicy")
 
   import com.pointr.tcp.rpc.SolverIf._

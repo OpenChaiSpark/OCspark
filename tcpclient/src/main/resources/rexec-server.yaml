@@ -1,0 +1,18 @@
+host: localhost
+port: 8989
+serverServiceIfs:
+    RexecServerIf :
+        serviceName: Rexec
+        className : com.pointr.tcp.rpc.RexecServerIf
+        props:
+            cmdline: "ls -lrta /shared"
+        serviceConf:
+            host: localhost
+                port: 8989
+                serviceName: Rexec
+                className : com.pointr.tcp.rexec.RexecIf
+                props:
+                    cmdline: "ls -lrta /shared"
+                #    params:
+                #    env:
+                    dir: /Users/steve
