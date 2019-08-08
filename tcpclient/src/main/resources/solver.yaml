@@ -1,11 +1,10 @@
-map:
-  SolverIf :
-    className : com.pointr.tcp.rpc.SolverIf
-    serverHost: localhost
-    serverPort: 4561
-    data:
-      nrows: 50
-      ncols: 20
-    model:
-      maxLoops: 3
-
+logLevel: 3
+host: localhost
+port: 4561
+serviceName: Solver
+className : com.pointr.tcp.rpc.SolverIf
+props:
+  MaxLoops: 10
+  data.nrows: 50
+  data.ncols: 20
+  model.maxLoops: 3

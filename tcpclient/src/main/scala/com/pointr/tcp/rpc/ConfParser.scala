@@ -11,4 +11,9 @@ object ConfParser {
     conf
   }
 
+  def parseServiceConf(confPath: String) = {
+    val conf = YamlUtils.toScala[ServiceConf](FileUtils.readFileAsString(confPath))
+    conf
+  }
+
 }

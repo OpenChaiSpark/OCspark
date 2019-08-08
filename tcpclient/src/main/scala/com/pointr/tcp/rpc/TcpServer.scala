@@ -22,12 +22,12 @@ import java.util.concurrent.Executors
 
 import com.pointr.tcp.util.Logger
 
-case class ServerIfConf(serviceName: String, className: String, props: Map[String, Any],optServiceConf: Option[ServiceConf] = None, host: String = "localhost", port: Int = 4561) {
+case class ServerIfConf(serviceName: String, className: String, props: Map[String, Any], service: Option[ServiceConf] = None, host: String = "localhost", port: Int = 4561) {
 
-  lazy val serviceConf = optServiceConf.get
+  lazy val serviceConf = service.get
 }
 
-case class TcpServerConf(serverServiceIfs: Map[String,ServerIfConf], host: String = "localhost", port: Int = 4561)
+case class TcpServerConf(serverServices: Map[String,ServerIfConf], host: String = "localhost", port: Int = 4561)
 
 case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pServer with P2pBinding with Logger {
 
@@ -169,7 +169,7 @@ object TcpServer {
 
   def createDefaultServer(confPath: String)= {
     val server = TcpServer("localhost",DefaultPort,
-      new SolverServerIf(ConfParser.parseServerConf(DefaultConfPath).serverServiceIfs("Solver")))
+      new SolverServerIf(ConfParser.parseServerConf(DefaultConfPath).serverServices("Solver")))
     server
   }
   var DefaultConfPath = "/git/OCspark/tcpclient/src/main/resources/solver-server.yaml"

@@ -26,7 +26,7 @@ object SolverServerIf {
   val WeightsMergePolicies = Seq("average", "best")
 }
 
-class SolverServerIf(conf: ServerIfConf) extends ServerIf("SolverServerIf", Option(conf)) {
+class SolverServerIf(conf: ServerIfConf) extends ServerIf("SolverServer", Option(conf)) {
   val weightsMergePolicy = conf.props("weightsMergePolicy")
 
   import com.pointr.tcp.rpc.SolverIf._
@@ -34,7 +34,7 @@ class SolverServerIf(conf: ServerIfConf) extends ServerIf("SolverServerIf", Opti
   import collection.mutable
 
   var loops = 0
-  val MaxLoops = 30
+  val MaxLoops = conf.service.get.props("MaxLoops").asInstanceOf[Int]
 
   var curWeightsAndAccuracy: (DArray, Double) = (null,-1.0)
   override def service(req: P2pReq[_]): P2pResp[_] = {

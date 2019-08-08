@@ -13,6 +13,7 @@ trait Logger {
   def info(msg: String) = Logger.info(msg)
   def warn(msg: String) = Logger.warn(msg)
   def error(msg: String) = Logger.error(msg)
+  def error(msg: String, t: Throwable ) = Logger.error(msg, t)
 }
 object Logger {
 

@@ -7,7 +7,7 @@ object ServerFactory extends Logger {
   def create(confPath: String) = {
     val conf = ConfParser.parseServerConf(confPath)
 
-    val servers = for ((serverIfName, serverIfConf) <- conf.serverServiceIfs) yield {
+    val servers = for ((serverIfName, serverIfConf) <- conf.serverServices) yield {
       info(s"ServerFactory: creating serverIf=$serverIfName..")
       val serverIf = ServerIfFactory.createIf(serverIfName,serverIfConf)
       val server = TcpServer(conf.host, conf.port, serverIf)

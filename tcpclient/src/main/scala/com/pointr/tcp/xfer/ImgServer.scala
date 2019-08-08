@@ -1,4 +1,4 @@
-package com.pointr.tensorflow
+package com.pointr.tcp.xfer
 
 import java.net.ConnectException
 import java.util.concurrent.atomic.AtomicInteger
@@ -8,43 +8,30 @@ import com.pointr.tcp.rpc._
 import com.pointr.tcp.util.Logger._
 import com.pointr.tcp.util._
 import com.pointr.tcp.xfer._
-import com.pointr.util.{AppConfig, TfConfig}
+
+case class ImgServerConf(appName: String, key: String) // placeholder
 
 // The main thing we need to override here is using XferQConServerIf inside the server object
-class TfServer(val appConfig: AppConfig, val outQ: BlockingQueue[TaggedEntry], val tfTcpParams: TcpParams,
+class ImgServer(val imgServerConf: ImgServerConf, val outQ: BlockingQueue[TaggedEntry], val imgTcpParams: TcpParams,
   val tcpParams: TcpParams, val xtcpParams: TcpParams) {
 
   val ConnectWait = 3
 
-  val xferServer = new QXferConServer(outQ/*.asInstanceOf[BlockingQueue[TaggedEntry]]*/,
+  val xferServer = new QXferConServer(outQ,
     tcpParams, xtcpParams)
-  info(s"*** TfServer")
-  val tfServer = new TcpServer(tfTcpParams.server, tfTcpParams.port, new TfServerIf(appConfig, outQ, tfTcpParams.port))
+  info(s"*** ImgServer")
+  val imgServer = new TcpServer(imgTcpParams.server, imgTcpParams.port, new ImgServerIf(imgServerConf, outQ, imgTcpParams.port))
 
   def start() = {
-    var connected = false
     xferServer.start
-    tfServer.start
-    while (!connected) {
-      try {
-        GpuRegistry.registerGpuAlternate(appConfig("connections.gpuRegistryHost"), appConfig("connections.gpuRegistryPort").toInt, TfConfig.getHostName, tcpParams.port)
-        connected = true
-        error(s"Connected to Gpu Registry")
-      } catch {
-        case ce: ConnectException =>
-          error(s"Unable to connect to GpuRegistry - will try again in $ConnectWait seconds ..")
-          Thread.sleep(1000 * ConnectWait)
-      }
-    }
-    Thread.sleep(100)
+    imgServer.start
   }
 
 }
 
-object TfServer {
+object ImgServer {
 
-
-  val cfile = s"${System.getProperty("openchai.tfserver.config.file")}"
+  val cfile = s"${System.getProperty("pointr.imgserver.config.file")}"
   info(s"Configfile=$cfile")
 
   val yamlConf = readConfig(cfile)
@@ -55,9 +42,9 @@ object TfServer {
 //    throw new IllegalStateException(s"Unable to create image dirs ${f.getAbsolutePath}")
 //  }
 
-  def apply(yamlConf: AppConfig, outQ: BlockingQueue[TaggedEntry], tfTcpParams: TcpParams, tcpParams: TcpParams,
+  def apply(yamlConf: ImgServerConf, outQ: BlockingQueue[TaggedEntry], imgTcpParams: TcpParams, tcpParams: TcpParams,
     xtcpParams: TcpParams) = {
-    val server = new TfServer(yamlConf, outQ, tfTcpParams, tcpParams, xtcpParams)
+    val server = new ImgServer(yamlConf, outQ, imgTcpParams, tcpParams, xtcpParams)
     server.start
   }
 
@@ -66,9 +53,9 @@ object TfServer {
     case x => x.toLowerCase
   }
 
-  def readConfig(path: String): AppConfig = {
+  def readConfig(path: String): ImgServerConf = {
 //    parseJsonToMap(FileUtils.readFileAsString(path))
-    new AppConfig(path, os)
+    new ImgServerConf(path, os)
   }
 
   def main(args: Array[String]): Unit = {
@@ -90,7 +77,7 @@ object TfServer {
 }
 
 
-class TfServerIf(val appConfig: AppConfig, val q: BlockingQueue[TaggedEntry], port: Int = 0) extends ServerIf("TfServerIf") {
+class ImgServerIf(val imgServerConf: ImgServerConf, val q: BlockingQueue[TaggedEntry], port: Int = 0) extends ServerIf("ImgServerIf") {
 
   val pathsMap = new java.util.concurrent.ConcurrentHashMap[String, TcpXferConfig]()
 
@@ -133,7 +120,7 @@ class TfServerIf(val appConfig: AppConfig, val q: BlockingQueue[TaggedEntry], po
         val app = struct.imgApp
         info(s"Service: Invoking LabelImg: struct=$struct")
 
-        val estruct = LabelImgExecStruct(struct, appConfig(app, "cmdline"), app, appConfig(app, "rundir"), appConfig(app, "tmpdir"))
+        val estruct = LabelImgExecStruct(struct, "a"/*ImgServerConf( app, "cmdline") */, app, "b" /*imgServerConf(app, "rundir")*/, "c" /*imgServerConf(app, "tmpdir") */)
         val resp = labelImg(estruct)
         LabelImgResp(resp)
       case _ =>

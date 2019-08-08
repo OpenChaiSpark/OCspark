@@ -5,8 +5,8 @@ import java.net.SocketException
 import com.pointr.tcp.rpc._
 import com.pointr.tcp.util.Logger._
 import com.pointr.tcp.util.{ExecResult, FileUtils, TcpCommon}
+import com.pointr.tcp.xfer.{DataPtr, TaggedEntry, TcpXferConfig, XferWriteParams}
 import com.pointr.tcp.xfer.XferConCommon._
-import com.pointr.tcp.xfer._
 import com.pointr.tensorflow.DmaXferConClient.DmaXferControllers
 import com.pointr.tensorflow.api.Logger
 import com.pointr.util.{TfAppConfig, TfConfig}

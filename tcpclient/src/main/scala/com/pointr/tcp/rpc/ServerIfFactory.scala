@@ -7,14 +7,14 @@ object ServerIfFactory extends Logger {
 
   def createIf(confPath: String): SolverServerIf = {
     val conf = ConfParser.parseServerConf(confPath)
-    createIf(conf.serverServiceIfs.head._1, conf.serverServiceIfs.head._2)
+    createIf(conf.serverServices.head._1, conf.serverServices.head._2)
   }
 
   def createIf(serviceName: String, serviceConf: ServerIfConf): SolverServerIf = {
     val className = serviceConf.className
     info(s"Creating $className for ServiceIF $serviceName ..")
-    className.substring(className.lastIndexOf(".")+1) match {
-      case "SolverServerIf" =>
+    serviceName match {
+      case "SolverServer" =>
         val solver = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[SolverServerIf]
         solver
       case _ => throw new UnsupportedOperationException(s"Unsupported ServerServiceIf $className")

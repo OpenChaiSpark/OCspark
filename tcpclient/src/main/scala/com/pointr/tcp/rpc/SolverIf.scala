@@ -29,7 +29,7 @@ import scala.util.Random
   * Weights Updater Interface used for Driver to Worker piecewise sgd updates
   *
   */
-class SolverIf extends ServiceIf("Solver") {
+class SolverIf(serviceConf: ServiceConf) extends ServiceIf(Option(serviceConf)) {
 
   import SolverIf._
 
@@ -80,13 +80,17 @@ class SolverIf extends ServiceIf("Solver") {
     if (trainParams.optW.isEmpty) {
       trainParams.optW = Some(initWeights(Seq(3, 4)))
     }
+    val output = new StringBuilder()
     while (keepGoing(n).value) {
       debug(s"About to train with ModelParams=${trainParams.toString}")
       val er = trainEpoch(trainParams, data)
+      output.append(er.toString)
       trainParams = sendEpochResult(er).value
+      output.append(trainParams.toString)
       n += 1
     }
     info(s"We were told to *not* keep going for n=$n")
+    output.toString
   }
 
 }

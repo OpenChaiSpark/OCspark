@@ -28,16 +28,6 @@ object QXferConServer {
           } else {
             None
           }
-//        while (p.isEmpty && it.hasNext && !aq.isEmpty) {
-//          val pv = it.next
-//          info(s"Queue entry: ${pv}")
-//          p = if (pv.tag == tag) {
-//            info(s"Found entry ${pv.tag}")
-//            val beforeCnt = aq.size
-//            val changed = aq.remove(pv)
-//            assert(changed && aq.size == beforeCnt-1,s"Why is entry not removed from queue??")
-//            Option(pv)
-
         }
       p
     }
@@ -65,8 +55,6 @@ object QXferConServer {
     val cont = TestControllers
     val params = QTestParams("local", cont.conHost, cont.conPort, cont.dataHost, cont.dataPort)
     apply(q, TcpParams(params.cHost, params.cPort), TcpParams(params.sHost, params.sPort))
-//    val (host,port,xhost,xport,ahost, aport, configFile) = XferConServer.makeXferConnections(args)
-//    val server = makeXferControllers(q, XferControllerArgs(host,port,xhost,xport,ahost,aport, configFile,Array.empty[Byte],null,null))
     Thread.currentThread.join
   }
 

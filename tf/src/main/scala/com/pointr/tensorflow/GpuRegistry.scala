@@ -16,16 +16,9 @@ object GpuRegistry {
 
   class RegistryIf extends ServiceIf("GpuRegistry") {
       def register(gpuHost: String, gpuPort: Int) = {
-//      try {
         val resp = getRpc().request(RegisterGpuReq(RegisterGpuStruct(gpuHost, gpuPort)))
         info(s"RegisterGpu response: $resp")
         resp.asInstanceOf[RegisterGpuResp]
-//      } catch {
-//        case se: SocketException =>
-//            error(s"SocketException on RegisterGpu", se)
-//            throw se
-//        case e: Exception => throw e
-//      }
       }
     }
 

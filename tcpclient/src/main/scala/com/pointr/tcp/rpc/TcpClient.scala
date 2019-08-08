@@ -121,7 +121,7 @@ object TcpClient {
     val serviceName = serviceConf.serviceName
     info(s"Creating $className for ServiceIF $serviceName ..")
     val service = serviceName match {
-      case "SolverIf" =>
+      case "Solver" =>
         val service = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[SolverIf]
         service
       case "Rexec" =>
