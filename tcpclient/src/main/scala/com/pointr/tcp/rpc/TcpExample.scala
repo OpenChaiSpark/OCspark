@@ -1,6 +1,5 @@
-package com.pointr.tcp
+package com.pointr.tcp.rpc
 
-import com.pointr.tcp.rpc.{ServerFactory, SolverServerIf, TcpClient, TcpServer}
 import com.pointr.tcp.util.TcpUtils
 
 object TcpExample {

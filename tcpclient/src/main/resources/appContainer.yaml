@@ -1,0 +1,7 @@
+logLevel: 3
+host: localhost
+port: 4561
+serviceName: AppContainerService
+className : com.pointr.tcp.sparcle.AppContainerService
+props:
+  foo: bar

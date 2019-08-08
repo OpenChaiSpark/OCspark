@@ -1,11 +1,11 @@
-package com.pointr.tcp.xfer
+package com.pointr.tcp.imgclient
 
 import java.net.SocketException
 
+import com.pointr.tcp.imgclient.DataXferConClient.DataXferControllers
 import com.pointr.tcp.rpc._
 import com.pointr.tcp.util.Logger._
-import com.pointr.tcp.util.{ExecResult, FileUtils, Logger, TcpCommon, YamlUtils}
-import com.pointr.tcp.xfer.DataXferConClient.DataXferControllers
+import com.pointr.tcp.util._
 import com.pointr.tcp.xfer.XferConCommon._
 import com.pointr.tcp.xfer._
 

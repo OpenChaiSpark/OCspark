@@ -1,6 +1,6 @@
 package com.pointr.tcp
 
-import com.pointr.tcp.rpc.{SolverServerIf, TcpClient, TcpServer}
+import com.pointr.tcp.rpc.{SolverServerIf, TcpClient, TcpExample, TcpServer}
 import com.pointr.tcp.util.TcpUtils
 import org.scalatest.FunSuite
 

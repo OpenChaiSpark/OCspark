@@ -116,7 +116,7 @@ object TcpClient {
     service
   }
 
-  def serviceFromConf(serviceConf: ServiceConf) = {
+  def serviceFromConf(serviceConf: ServiceConf): ServiceIf = {
     val className = serviceConf.className
     val serviceName = serviceConf.serviceName
     info(s"Creating $className for ServiceIF $serviceName ..")
@@ -127,7 +127,9 @@ object TcpClient {
       case "Rexec" =>
         val service = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[RexecIf]
         service
-      case _ => throw new UnsupportedOperationException(s"Unsupported ServiceIf $className")
+      case _ =>
+        val service = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[ServiceIf]
+        service
     }
     service.asInstanceOf[ServiceIf]
   }

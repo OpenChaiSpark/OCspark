@@ -8,7 +8,9 @@ object ReflectUtils {
 
   def instantiate[T](className: String)(args: Any*): T = {
     //    debug(s"Instantiating $className ..")
-    instantiate(Class.forName(className))(args.map(_.asInstanceOf[AnyRef]): _*).asInstanceOf[T]
+    val o1 = instantiate(Class.forName(className))(args.map(_.asInstanceOf[AnyRef]): _*)
+    val o2 = o1.asInstanceOf[T]
+    o2
   }
 
   def instantiate[T: TypeTag](clazz: java.lang.Class[T])(args: AnyRef*): T = {

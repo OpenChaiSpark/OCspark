@@ -1,7 +1,9 @@
-package com.pointr.tcp.xfer
+package com.pointr.tcp.imgclient
 
 import com.pointr.tcp.rpc.TcpParams
 import com.pointr.tcp.util.Logger
+import com.pointr.tcp.xfer.XferConCommon.XferControllerArgs
+import com.pointr.tcp.xfer._
 
 // placeholder: Burcak will inform what more needed
 case class DataXferConf(name: String)
@@ -30,8 +32,6 @@ class DataXferConClient(val dataConfig: DataXferConf, val tcpParams: TcpParams, 
 }
 
 object DataXferConClient extends Logger {
-
-  import XferConCommon._
   case class DataXferControllers(client: DataXferConClient, xferConf: XferConfig,
     wparams: XferWriteParams, rparams: XferReadParams)
 

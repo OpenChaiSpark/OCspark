@@ -1,5 +1,6 @@
 package com.pointr.tensorflow
 
+import com.pointr.tcp.imgclient.DataXferConf
 import com.pointr.tcp.rpc.TcpParams
 import com.pointr.tcp.xfer._
 import com.pointr.tensorflow.api.Logger._

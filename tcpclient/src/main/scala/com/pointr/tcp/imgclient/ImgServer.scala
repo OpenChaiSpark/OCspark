@@ -1,6 +1,5 @@
-package com.pointr.tcp.xfer
+package com.pointr.tcp.imgclient
 
-import java.net.ConnectException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 

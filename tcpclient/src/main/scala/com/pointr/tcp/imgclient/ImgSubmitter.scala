@@ -4,7 +4,6 @@ import java.util.Base64
 
 import com.pointr.tcp.util.FileUtils._
 import com.pointr.tcp.util.Logger._
-import com.pointr.tcp.xfer.{ImgAppConfig, ImgClient, ImgConfig, LabelImgStruct}
 
 import scala.collection.mutable.{ArrayBuffer => AB}
 
