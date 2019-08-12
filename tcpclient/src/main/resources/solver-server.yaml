@@ -8,7 +8,7 @@ serverServices:
         props:
             weightsMergePolicy: best
         service:
-          logLevel: 3
+          logLevel: 2
           host: localhost
           port: 4561
           serviceName: Solver

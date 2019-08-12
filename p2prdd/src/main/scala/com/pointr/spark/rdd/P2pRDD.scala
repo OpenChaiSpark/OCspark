@@ -25,7 +25,8 @@ import com.pointr.tcp.rpc.ServerIf
 
 import scala.reflect.ClassTag
 
-class P2pRDD[KVO:ClassTag,T:ClassTag](sc: SparkContext, parent: RDD[KVO], p2pParams: P2pConnectionParams, serverIf: ServerIf, serviceIf: ServiceIf = new SolverIf)
+class P2pRDD[KVO:ClassTag,T:ClassTag](sc: SparkContext, parent: RDD[KVO], p2pParams: P2pConnectionParams, serverIf: ServerIf, serviceIf: ServiceIf
+= new SolverIf(ConfParser.parseServiceConf(TcpServer.DefaultConfPath)))
   extends RDD[T](parent) {
 
   val tcpParams = p2pParams.asInstanceOf[TcpParams]

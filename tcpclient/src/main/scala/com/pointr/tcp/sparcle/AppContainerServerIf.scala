@@ -4,7 +4,6 @@ import com.pointr.tcp.rpc.{P2pReq, P2pResp, ServerIf, ServerIfConf}
 import com.pointr.tcp.util.Logger
 
 class AppContainerServerIf(conf: ServerIfConf) extends ServerIf("AppContainerServer", Option(conf)) with Logger {
-  val weightsMergePolicy = conf.props("weightsMergePolicy")
 
   import AppContainerService._
 
@@ -12,19 +11,19 @@ class AppContainerServerIf(conf: ServerIfConf) extends ServerIf("AppContainerSer
     debug(s"Received request ${req.toString}")
     req match {
       case o: ExecuteAppCommandReq =>
-        ExecuteAppCommandResp("YogiBearAndBooBooBearCommand")
+        ExecuteAppCommandResp(s"YogiBearAndBooBooBearCommandResponse to ${o.toString}")
       case o: ExecuteAppCommand2Req =>
-        ExecuteAppCommand2Resp(ExecuteAppCommand2Struct("YogiBearAndBooBooBearCommand2", "GPU123"))
+        ExecuteAppCommand2Resp(ExecuteAppCommand2Struct(s"YogiBearAndBooBooBearCommand2 response to ${o.toString}", "GPU123"))
       case o: GetAppStatusReq =>
-        GetAppStatusResp("GPU123")
+        GetAppStatusResp(s"GPU123 response to ${o.toString}")
       case o: ReadNextFromSparcleReq =>
-        ReadNextFromSparcleResp("GPU123")
+        ReadNextFromSparcleResp(s"GPU123 response to ${o.toString}")
       case o: WriteAppDataToSparcleReq =>
-        WriteAppDataToSparcleResp("OK")
+        WriteAppDataToSparcleResp(s"OK response to ${o.toString}")
       case o: WriteFeedDataToSparcleReq =>
-        WriteFeedDataToSparcleResp("OK")
+        WriteFeedDataToSparcleResp(s"OK response to ${o.toString}")
       case o: WriteAppNativeDataToSparcleReq =>
-        WriteAppNativeDataToSparcleResp("SUCCESS")
+        WriteAppNativeDataToSparcleResp(s"SUCCESS response to ${o.toString}")
       case _ => throw new IllegalArgumentException(s"Unknown service type ${req.getClass.getName}")
     }
   }

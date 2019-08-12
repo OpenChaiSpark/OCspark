@@ -18,7 +18,7 @@ object ServerIfFactory extends Logger {
         val solver = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[SolverServerIf]
         solver
       case _ =>
-        val solver = ReflectUtils.instantiate(className)(serviceConf).asInstanceOf[ServerIf]
+        val solver = ReflectUtils.instantiate(className)(serviceName, Option(serviceConf)).asInstanceOf[ServerIf]
         solver
 //        throw new UnsupportedOperationException(s"Unsupported ServerServiceIf $className")
     }

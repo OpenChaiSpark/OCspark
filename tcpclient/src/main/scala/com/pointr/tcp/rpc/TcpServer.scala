@@ -31,6 +31,8 @@ case class TcpServerConf(serverServices: Map[String,ServerIfConf], host: String 
 
 case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pServer with P2pBinding with Logger {
 
+  import TcpClient.BufSize
+
   private var serverThread: Thread = _
   private var serverSocket: ServerSocket = _
   private var stopRequested: Boolean = _
@@ -135,7 +137,7 @@ case class TcpServer(host: String, port: Int, serverIf: ServerIf) extends P2pSer
           //          val req = unpacked._2.asInstanceOf[P2pReq[_]]
           //          debug(s"Message received: ${req.toString}")
           val resp = serverIf.service(req)
-          //          debug(s"Sending response:  ${resp.toString}")
+          debug(s"Sending response:  ${resp.toString}")
           val ser = serializeStream("/tmp/serverResp.out", pack("/tmp/serverResp.pack.out", resp))
           debug(s"serialized stream length is ${ser.length}")
           val b1 = MagicNumber.getBytes("ISO-8859-1")

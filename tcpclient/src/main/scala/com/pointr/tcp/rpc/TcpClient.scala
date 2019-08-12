@@ -5,6 +5,8 @@ import com.pointr.tcp.util.Logger._
 import com.pointr.tcp.util.TcpCommon._
 import com.pointr.tcp.util.{FileUtils, ReflectUtils, TcpUtils, YamlUtils}
 
+import scala.reflect.runtime.universe
+
 case class TcpParams(server: String, port: Int) extends P2pConnectionParams
 
 //class BinaryTcpClient(connParams: TcpParams) extends TcpClient(connParams, new BinaryIf)
@@ -16,6 +18,7 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
   import java.net._
 
   import reflect.runtime.universe._
+  import TcpClient._
 
   private var sock: Socket = _
   private var os: DataOutputStream = _
@@ -49,7 +52,13 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
   private var savedConnParam: P2pConnectionParams = _
 
   val buf = new Array[Byte](BufSize)
+
+
   override def request[U: TypeTag, V: TypeTag](req: P2pReq[U]): P2pResp[V] = {
+    requestJava[U,V](req)
+  }
+
+  override def requestJava[U, V](req: P2pReq[U]): P2pResp[V] = {
     // TODO: determine how to properly size the bos
     if (!isConnected) {
       connect(savedConnParam)
@@ -97,6 +106,8 @@ class TcpClient(val connParams: TcpParams, val serviceIf: ServiceIf)
 
 object TcpClient {
   val TestPort = 8989
+  val BufSize = (24 * Math.pow(2, 20) - 1).toInt // TODO: change back to 64MB when xgene available
+
 
   System.setProperty("java.net.preferIPv4Stack","true")
 

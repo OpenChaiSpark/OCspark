@@ -4,7 +4,6 @@ import java.net.ConnectException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 
-import com.pointr.tcp.imgclient
 import com.pointr.tcp.rpc._
 import com.pointr.tcp.util.Logger._
 import com.pointr.tcp.util._
@@ -124,7 +123,7 @@ class TfServerIf(val appConfig: AppConfig, val q: BlockingQueue[TaggedEntry], po
     val exeResult = ProcessUtils.exec(ExecParams(estruct.appName, s"${exe}",
       Option(estruct.cmdline.replace("${1}",path).replace("${2}",istruct.tag).split(" ").tail), Some(Seq(estruct.runDir)), estruct.runDir))
     info(s"Result: $exeResult")
-    imgclient.LabelImgRespStruct(istruct.tag, istruct.fpath, istruct.outPath, exeResult)
+    LabelImgRespStruct(istruct.tag, istruct.fpath, istruct.outPath, exeResult)
   }
 
   override def service(req: P2pReq[_]): P2pResp[_] = {

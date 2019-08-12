@@ -6,6 +6,7 @@ import com.pointr.tcp.rpc.{P2pReq, P2pResp, ServiceConf, ServiceIf}
 import com.pointr.tcp.util.Logger
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 /**
   * Container service manages the life cycle of the app and
@@ -36,13 +37,21 @@ object AppContainerService {
 
   case class GetAppStatusResp(value: String) extends P2pResp[String]
 
+  case class IsAppRunningReq(value: String) extends P2pReq[String] {
+    val GPURefID: String = value
+  }
+
+  case class IsAppRunningResp(value: Boolean) extends P2pResp[Boolean]
+
   case class ReadNextFromSparcleReq(value: String) extends P2pReq[String] {
     val GPURefID: String = value
   }
 
   case class ReadNextFromSparcleResp(value: String) extends P2pResp[String]
 
-  case class WriteAppDataToSparcleStruct(GPURefID: String, output: Array[Byte])
+  case class WriteAppDataToSparcleStruct(GPURefID: String, output: Array[Byte]) {
+    override def toString: String = s"$GPURefID  ${new String(output, "ISO-8859-1")}"
+  }
 
   case class WriteAppDataToSparcleReq(value: WriteAppDataToSparcleStruct) extends P2pReq[WriteAppDataToSparcleStruct] {
     val GPURefID: String = value.GPURefID
@@ -51,7 +60,9 @@ object AppContainerService {
 
   case class WriteAppDataToSparcleResp(value: String) extends P2pResp[String]
 
-  case class WriteFeedDataToSparcleStruct(GPURefID: String, output: Array[Byte])
+  case class WriteFeedDataToSparcleStruct(GPURefID: String, output: Array[Byte]) {
+    override def toString: String = s"$GPURefID  ${new String(output, "ISO-8859-1")}"
+  }
 
   case class WriteFeedDataToSparcleReq(value: WriteFeedDataToSparcleStruct) extends P2pReq[WriteFeedDataToSparcleStruct] {
     val GPURefID: String = value.GPURefID
@@ -60,7 +71,9 @@ object AppContainerService {
 
   case class WriteFeedDataToSparcleResp(value: String) extends P2pResp[String]
 
-  case class WriteAppNativeDataToSparcleStruct(GPURefID: String, output: Array[Byte])
+  case class WriteAppNativeDataToSparcleStruct(GPURefID: String, output: Array[Byte]) {
+    override def toString: String = s"$GPURefID  ${new String(output,"ISO-8859-1")}"
+  }
 
   case class WriteAppNativeDataToSparcleReq(val value: WriteAppNativeDataToSparcleStruct) extends P2pReq[WriteAppNativeDataToSparcleStruct] {
     val GPURefID: String = value.GPURefID
@@ -69,11 +82,6 @@ object AppContainerService {
 
   case class WriteAppNativeDataToSparcleResp(value: String) extends P2pResp[String]
 
-  case class IsAppRunningReq(value: String) extends P2pReq[String] {
-    val GPURefID: String = value
-  }
-
-  case class IsAppRunningResp(value: Boolean) extends P2pResp[Boolean]
 
 }
 
@@ -115,13 +123,15 @@ class AppContainerService(conf: ServiceConf) extends ServiceIf(Option(conf)) wit
   }
 
   override def run(): Any = {
-    info(executeAppCommand(ExecuteAppCommandReq("YogiBear - run!!")).toString)
-    info(executeAppCommand2(ExecuteAppCommand2Req(ExecuteAppCommand2Struct("YogiBear - run more!!", "Gpu123"))).toString)
-    info(getAppStatus(GetAppStatusReq("Here's My Status!")).toString)
-    info(readNextFromSparcle(ReadNextFromSparcleReq("Here's My Status!")).toString)
-    info(writeAppDataToSparcle(WriteAppDataToSparcleReq(WriteAppDataToSparcleStruct("GpuID", "WriteApp buffer data here".getBytes("ISO-8859-1")))).toString)
-    info(writeFeedDataToSparcle(WriteFeedDataToSparcleReq(WriteFeedDataToSparcleStruct("GpuID", "WriteFeed buffer data here".getBytes("ISO-8859-1")))).toString)
-    info(writeAppNativeDataToSparcle(WriteAppNativeDataToSparcleReq(WriteAppNativeDataToSparcleStruct("GpuID", "WriteAppNative buffer data here".getBytes("ISO-8859-1")))).toString)
+    val outs = mutable.ArrayBuffer[String]()
+    outs += executeAppCommand(ExecuteAppCommandReq("YogiBear - run!!")).toString
+    outs += executeAppCommand2(ExecuteAppCommand2Req(ExecuteAppCommand2Struct("YogiBear - run more!!", "Gpu123"))).toString
+    outs += getAppStatus(GetAppStatusReq("Here's My Status!")).toString
+    outs += readNextFromSparcle(ReadNextFromSparcleReq("Here's My Status!")).toString
+    outs += writeAppDataToSparcle(WriteAppDataToSparcleReq(WriteAppDataToSparcleStruct("GpuID", "WriteApp buffer data here".getBytes("ISO-8859-1")))).toString
+    outs += writeFeedDataToSparcle(WriteFeedDataToSparcleReq(WriteFeedDataToSparcleStruct("GpuID", "WriteFeed buffer data here".getBytes("ISO-8859-1")))).toString
+    outs += writeAppNativeDataToSparcle(WriteAppNativeDataToSparcleReq(WriteAppNativeDataToSparcleStruct("GpuID", "WriteAppNative buffer data here".getBytes("ISO-8859-1")))).toString
+    outs.mkString("\n")
   }
 
   //  def setSparcleContext(sc: SparcleContext): Unit
