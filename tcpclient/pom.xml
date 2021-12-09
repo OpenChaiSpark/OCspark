@@ -42,7 +42,7 @@
         <scala.version>2.11</scala.version>
         <breeze.version>0.12</breeze.version>
         <scala.binary.version>2.11.8</scala.binary.version>
-        <jackson.version>2.6.5</jackson.version>
+        <jackson.version>2.9.10.8</jackson.version>
         <json4s.version>3.3.0</json4s.version>
     </properties>
 
